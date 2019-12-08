@@ -1,0 +1,16 @@
+package pia.database.model.archive
+
+import org.bson.types.ObjectId
+import org.mongodb.morphia.annotations.Entity
+import org.mongodb.morphia.annotations.Id
+import pia.database.DbObject
+import java.util.*
+
+@Entity("Image")
+class Image : DbObject {
+    @Id
+    val id : UUID = UUID.randomUUID()
+    var sha256Hash : String = ""
+    var originalFileName: String = ""
+    var pathToFileOnDisk: String = ""
+}

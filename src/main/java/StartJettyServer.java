@@ -5,6 +5,7 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.servlet.ServletContainer;
 import pia.database.Database;
 import pia.rest.ImageService;
+import pia.rest.MyApplication;
 
 public class StartJettyServer {
 
@@ -17,9 +18,13 @@ public class StartJettyServer {
         contextHandler.setContextPath("/");
         server.setHandler(contextHandler);
 
-        ServletHolder servletHolder = contextHandler.addServlet(ServletContainer.class, "/pia/rest/*");
+        ServletHolder servletHolder = contextHandler.addServlet(ServletContainer.class, "/rest/*");
         servletHolder.setInitOrder(0);
-        servletHolder.setInitParameter("jersey.config.server.provider.classnames", ImageService.class.getCanonicalName());
+        servletHolder.setInitParameter("javax.ws.rs.Application", "pia.rest.MyApplication");
+        //servletHolder.setInitParameter( "com.sun.jersey.config.property.resourceConfigClass", "pia.rest.MyApplication");
+        //servletHolder.setInitParameter("jersey.config.server.provider.packages",
+                //MyApplication.class.getCanonicalName());
+        //        "pia.rest");
         try {
             server.start();
             server.join();

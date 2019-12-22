@@ -11,4 +11,20 @@ public class Logger {
     public void error(String message, Throwable e) {
         logger.error(message, e);
     }
+
+    public void error(String message) {
+        logger.error(message);
+    }
+
+    public void error(String message, Object... params) {
+        logger.error(String.format(message, params));
+    }
+
+    public void warn(String message, Object... params) {
+        logger.warn(String.format(message, params));
+    }
+
+    public void info(String message, Object... params) {
+        logger.info(String.format(message, params));
+    }
 }

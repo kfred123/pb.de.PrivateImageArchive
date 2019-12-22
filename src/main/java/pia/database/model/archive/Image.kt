@@ -7,9 +7,7 @@ import pia.database.DbObject
 import java.util.*
 
 @Entity("Image")
-class Image : DbObject {
-    @Id
-    val id : UUID = UUID.randomUUID()
+class Image : DbObject() {
     var sha256Hash : String = ""
     var originalFileName: String = ""
     var pathToFileOnDisk: String = ""

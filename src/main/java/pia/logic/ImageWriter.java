@@ -1,43 +1,64 @@
 package pia.logic;
 
+import pia.database.DataBaseConnection;
 import pia.database.Database;
+import pia.database.DbException;
 import pia.database.model.archive.Image;
 import pia.exceptions.CreateHashException;
-import pia.tools.Configuration;
+import pia.filesystem.BufferedFile;
+import pia.filesystem.FileSystemHelper;
 import pia.tools.FileHash;
+import pia.tools.Logger;
 
-import java.io.FileOutputStream;
+import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Path;
 import java.util.Optional;
 
 public class ImageWriter {
-    public void addImage(InputStream imageStream, String fileName) throws IOException, CreateHashException {
-        Image image = new Image();
-        String newFileName = image.getId().toString() + getFileExtension(fileName);
-        Path path = Path.of(Configuration.getPathToFileStorage(), newFileName);
-        try(FileOutputStream outputStream = new FileOutputStream(path.toFile())) {
-            outputStream.write(imageStream.readAllBytes());
-        }
+    private final Logger logger = new Logger(ImageWriter.class);
 
-        Optional<String> hash = FileHash.createHash(imageStream);
+    public void addImage(BufferedFile bufferedFile, String fileName) throws IOException, CreateHashException {
+        Optional<String> hash = FileHash.createHash(bufferedFile);
         if(hash.isPresent()) {
-            image.setSha256Hash(hash.get());
-            image.setOriginalFileName(fileName);
-            image.setPathToFileOnDisk(path.toString());
-            Database.getConnection().insertObject(image);
+            Image image = new Image();
+            FileSystemHelper fileSystemHelper = new FileSystemHelper();
+            String fileOnDisk = image.getId().toString() + "." + fileSystemHelper.getFileExtension(fileName);
+            File file = fileSystemHelper.writeFileToDisk(bufferedFile, fileOnDisk);
+            if (file.exists()) {
+                image.setSha256Hash(hash.get());
+                image.setOriginalFileName(fileName);
+                image.setPathToFileOnDisk(file.getAbsolutePath());
+                Database.getConnection().insertObject(image);
+            } else {
+                logger.error("error writing file to disk");
+            }
         } else {
             throw new CreateHashException();
         }
     }
 
-    public static String getFileExtension(String fileName) {
-        String extension = "";
-        int lastDot = fileName.lastIndexOf(".");
-        if(lastDot >= 0) {
-            extension = fileName.substring(lastDot + 1);
+    public boolean deleteImage(Image image) {
+        boolean deleted = false;
+        String imageFile = image.getPathToFileOnDisk();
+        FileSystemHelper fileSystemHelper = new FileSystemHelper();
+        boolean deleteFromDb = true;
+        if (fileSystemHelper.fileExists(imageFile)) {
+            if (!fileSystemHelper.deleteFileFromDisk(imageFile)) {
+                deleteFromDb = false;
+                logger.error("could not imagefile from disk %s, db-entry will not be deleted", imageFile);
+            }
+        } else {
+            logger.warn("deleting image %s, file %s does not exist", image.getId(), image.getPathToFileOnDisk());
         }
-        return extension;
+        if (deleteFromDb) {
+            if (Database.getConnection().deleteObject(image)) {
+                deleted = true;
+            } else {
+                logger.error("could not delete the imageobject %s from database", image.getId());
+            }
+        }
+        return deleted;
     }
 }

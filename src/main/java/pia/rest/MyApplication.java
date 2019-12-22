@@ -1,15 +1,19 @@
 package pia.rest;
 
 import org.glassfish.jersey.media.multipart.MultiPartFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 
+import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.core.Application;
 import java.util.Set;
 
-public class MyApplication extends Application {
-    @Override
-    public Set<Class<?>> getClasses() {
-        Set<Class<?>> classes = super.getClasses();
-        classes.add(MultiPartFeature.class);
-        return classes;
+@ApplicationPath("/")
+public class MyApplication extends ResourceConfig {
+    public MyApplication() {
+        super();
+
+        register(MultiPartFeature.class);
+
+        register(ImageService.class);
     }
 }

@@ -3,5 +3,10 @@ package pia.filesystem
 import java.io.BufferedInputStream
 import java.io.InputStream
 
-class BufferedFile(val bytes : ByteArray) {
+open class BufferedFile(val bytes : ByteArray) {
+    companion object {
+        fun fromInputStream(inputStream : InputStream) : BufferedFile {
+            return BufferedFile(inputStream.readAllBytes())
+        }
+    }
 }

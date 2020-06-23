@@ -15,5 +15,6 @@ public class MyApplication extends ResourceConfig {
         register(MultiPartFeature.class);
 
         register(ImageService.class);
+        register(Base.class);
     }
 }

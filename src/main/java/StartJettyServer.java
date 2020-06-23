@@ -11,6 +11,7 @@ public class StartJettyServer {
 
     // pia.rest
     public static void main(String[] args) throws Exception {
+        org.apache.log4j.BasicConfigurator.configure();
         Database.initDatabase();
 
         Server server = new Server(8080);

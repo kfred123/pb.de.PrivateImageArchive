@@ -3,15 +3,22 @@ package pia.filesystem
 import pia.tools.Configuration
 import java.io.*
 import java.nio.file.Path
+import java.time.format.TextStyle
+import java.util.*
 
 class FileSystemHelper {
 
-    fun writeFileToDisk(bufferedFile: BufferedFile, fileName: String) : File {
-        val pathToDir = Path.of(Configuration.getPathToFileStorage())
-        val path =
-            Path.of(Configuration.getPathToFileStorage(), fileName)
+    fun writeFileToDisk(bufferedFile: BufferedFileWithMetaData, fileName: String) : File {
+        var year = "unknownyear"
+        var month = "unknownmonth"
+        if(bufferedFile.creationDate != null) {
+            year = bufferedFile.creationDate.year.toString()
+            month = bufferedFile.creationDate.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
+        }
+        val pathToDir =
+            Path.of(Configuration.getPathToFileStorage(), year, month)
         pathToDir.toFile().mkdirs()
-        val file = path.toFile()
+        val file = Path.of(pathToDir.toString(), fileName).toFile()
         FileOutputStream(file).use { outputStream -> outputStream.write(bufferedFile.bytes) }
         return file
     }

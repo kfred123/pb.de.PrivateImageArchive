@@ -2,10 +2,13 @@ package pia.filesystem
 
 import com.drew.imaging.ImageMetadataReader
 import com.drew.imaging.ImageProcessingException
+import com.drew.metadata.Directory
 import com.drew.metadata.Metadata
+import com.drew.metadata.exif.ExifIFD0Directory
 import com.drew.metadata.exif.ExifSubIFDDirectory
 import com.drew.metadata.icc.IccDirectory
 import com.drew.metadata.png.PngDirectory
+import org.eclipse.jetty.http.MetaData
 import pia.filesystem.BufferedFileWithMetaData.Companion.readImageCreationDate
 import pia.jobs.GroupDiskFilesByCreationDate
 import pia.tools.Logger
@@ -34,28 +37,40 @@ class BufferedFileWithMetaData(bytes : ByteArray,
 
         private fun readImageCreationDate(inputStream: InputStream): Date? {
             val metadata = readImageMetaData(inputStream)
-            val directory = metadata?.getFirstDirectoryOfType(IccDirectory::class.java)
-            IccDirectory.TAG_PROFILE_DATETIME
-            PngDirectory.TAG_LAST_MODIFICATION_TIME
-            return directory?.getDate(IccDirectory.TAG_PROFILE_DATETIME)
+            var creationDate = metadata?.tryGetTime(IccDirectory::class.java, IccDirectory.TAG_PROFILE_DATETIME)
+            if(creationDate == null) {
+                creationDate = metadata?.tryGetTime(ExifIFD0Directory::class.java, ExifIFD0Directory.TAG_DATETIME)
+            }
+            if(creationDate == null) {
+                //metadata?.logMetaData()
+            }
+            return creationDate
+        }
+
+        private fun <T : Directory> Metadata.tryGetTime(directoryClass: Class<T>, tag : Int) : Date?{
+            val directory = getFirstDirectoryOfType(directoryClass)
+            return directory?.getDate(tag)
         }
 
         private fun readImageMetaData(inputStream: InputStream): Metadata? {
             var metadata: Metadata? = null
             try {
                 metadata = ImageMetadataReader.readMetadata(inputStream)
-                metadata.directories.forEach {directory ->
-                    directory.tags.forEach {
-                        Logger(BufferedFileWithMetaData.javaClass).info("Directory {}; tagName {}, tagType {}, value {}",
-                        directory.javaClass, it.tagName, it.tagType, directory.getString(it.tagType))
-                    }
-                }
             } catch (e: ImageProcessingException) {
                 logger.error("error reading metadata from file %s", e)
             } catch (e: IOException) {
                 logger.error("error reading metadata from file %s", e)
             }
             return metadata
+        }
+
+        private fun Metadata.logMetaData() {
+            directories.forEach {directory ->
+                directory.tags.forEach {
+                    Logger(BufferedFileWithMetaData.javaClass).info("Directory %s; tagName %s, tagType %s, value %s",
+                            directory.javaClass.simpleName, it.tagName, it.tagType, directory.getString(it.tagType))
+                }
+            }
         }
     }
 }

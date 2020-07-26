@@ -36,6 +36,7 @@ public class ImageWriter {
                 image.setSha256Hash(hash.get());
                 image.setOriginalFileName(fileName);
                 image.setPathToFileOnDisk(file.getAbsolutePath());
+                image.setCreationTime(bufferedFile.getCreationDate());
                 Database.getConnection().insertObject(image);
             } else {
                 logger.error("error writing file to disk");

@@ -1,15 +1,11 @@
 package pia.rest;
 
-import com.drew.imaging.ImageMetadataReader;
-import kotlin.text.StringsKt;
 import org.eclipse.jetty.util.StringUtil;
 import org.glassfish.jersey.media.multipart.FormDataParam;
-import org.w3c.dom.Node;
 import pia.database.Database;
 import pia.database.DatabaseQuery;
 import pia.database.model.archive.Image;
 import pia.exceptions.CreateHashException;
-import pia.filesystem.BufferedFile;
 import pia.filesystem.BufferedFileWithMetaData;
 import pia.logic.ImageReader;
 import pia.logic.ImageWriter;
@@ -19,17 +15,12 @@ import pia.rest.contract.ObjectList;
 import pia.rest.contract.SuccessContract;
 import pia.tools.FileHash;
 
-import javax.imageio.ImageIO;
-import javax.imageio.metadata.IIOMetadata;
-import javax.imageio.stream.ImageInputStream;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.Iterator;
 import java.util.Optional;
 import java.util.UUID;
 

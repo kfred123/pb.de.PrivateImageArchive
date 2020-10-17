@@ -4,15 +4,15 @@ import org.eclipse.jetty.util.StringUtil;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import pia.database.Database;
 import pia.database.DatabaseQuery;
-import pia.database.model.archive.Image;
+import pia.database.model.archive.Video;
 import pia.exceptions.CreateHashException;
 import pia.filesystem.BufferedFileWithMetaData;
-import pia.logic.ImageReader;
-import pia.logic.ImageWriter;
+import pia.logic.VideoReader;
+import pia.logic.VideoWriter;
 import pia.rest.contract.ErrorContract;
-import pia.rest.contract.ImageApiContract;
 import pia.rest.contract.ObjectList;
 import pia.rest.contract.SuccessContract;
+import pia.rest.contract.VideoApiContract;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -24,32 +24,32 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 
-@Path("images")
-public class ImageService {
+@Path("videos")
+public class VideoService {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response queryImages() {
-        ObjectList<ImageApiContract> imageApiContractObjectList = new ObjectList<>();
-        DatabaseQuery<Image> query = Database.getConnection().query(Image.class);
-        for(Image image : query.getAll()) {
-            ImageApiContract contract = ImageApiContract.Companion.fromDb(image);
-            imageApiContractObjectList.add(contract);
+    public Response queryVideos() {
+        ObjectList<VideoApiContract> videoApiContractObjectList = new ObjectList<>();
+        DatabaseQuery<Video> query = Database.getConnection().query(Video.class);
+        for(Video video : query.getAll()) {
+            VideoApiContract contract = VideoApiContract.Companion.fromDb(video);
+            videoApiContractObjectList.add(contract);
         }
-        return Response.ok().entity(imageApiContractObjectList).build();
+        return Response.ok().entity(videoApiContractObjectList).build();
     }
 
-    @Path("checkImageExistanceByHash")
+    @Path("checkVideoExistanceByHash")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response checkImageExistanceByHash(@QueryParam("hashType") String hashType,
+    public Response checkVideoExistanceByHash(@QueryParam("hashType") String hashType,
                                               @QueryParam("hash") String hash) {
         Response response;
         String hashTypeInternal = hashType;
         if(StringUtil.isEmpty(hashTypeInternal)) {
             hashTypeInternal = "SHA-256";
         }
-        ImageReader reader = new ImageReader();
-        if(reader.findImagesBySHA256(hash).size() > 0) {
+        VideoReader reader = new VideoReader();
+        if(reader.findVideosBySHA256(hash).size() > 0) {
             response = Response.status(Response.Status.OK).build();
         } else {
             response = Response.status(Response.Status.NO_CONTENT).build();
@@ -60,14 +60,14 @@ public class ImageService {
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response addImage(@FormDataParam("image")InputStream imageStream,
+    public Response addVideo(@FormDataParam("video")InputStream videoStream,
                              @FormDataParam("fileName")String fileName,
                              @FormDataParam("creationTimeStamp")LocalDateTime creationTimeStamp) {
         Response response = null;
         try {
-            BufferedFileWithMetaData bufferedFile = BufferedFileWithMetaData.Companion.imageFromInputStream(imageStream);
-            ImageWriter writer = new ImageWriter();
-            writer.addImage(bufferedFile, fileName);
+            BufferedFileWithMetaData bufferedFile = BufferedFileWithMetaData.Companion.videoFromInputStream(videoStream);
+            VideoWriter writer = new VideoWriter();
+            writer.addVideo(bufferedFile, fileName);
         } catch (IOException e) {
             response = Response.serverError().entity(new ErrorContract(e)).build();
         } catch (CreateHashException e) {
@@ -81,13 +81,13 @@ public class ImageService {
         return response;
     }
 
-    @Path("{imageId}/getFile")
+    @Path("{videoId}/getFile")
     @GET
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    public Response getImageFile(@PathParam("imageId")String imageId) {
-        UUID imaageUUID = UUID.fromString(imageId);
-        ImageReader imageReader = new ImageReader();
-        Optional<InputStream> fileStream = imageReader.getImageFileByImageIdFromDisk(imaageUUID);
+    public Response getVideoFile(@PathParam("videoId")String videoId) {
+        UUID videoUuid = UUID.fromString(videoId);
+        VideoReader videoReader = new VideoReader();
+        Optional<InputStream> fileStream = videoReader.getVideoFileByVideoIdFromDisk(videoUuid);
 
         Response response;
         if(fileStream.isPresent()) {
@@ -98,20 +98,20 @@ public class ImageService {
         return response;
     }
 
-    @Path("{imageId}")
+    @Path("{videoId}")
     @DELETE
     @Produces(MediaType.APPLICATION_JSON)
-    public Response deleteImage(@PathParam("imageId")String imageId) {
+    public Response deleteVideo(@PathParam("videoId")String videoId) {
         Response response;
-        UUID imageUUID = UUID.fromString(imageId);
-        ImageReader imageReader = new ImageReader();
-        Optional<Image> image = imageReader.findImageById(imageUUID);
-        if(image.isPresent()) {
-            ImageWriter imageWriter = new ImageWriter();
-            if(imageWriter.deleteImage(image.get())) {
+        UUID videoUuid = UUID.fromString(videoId);
+        VideoReader videoReader = new VideoReader();
+        Optional<Video> video = videoReader.findVideoById(videoUuid);
+        if(video.isPresent()) {
+            VideoWriter videoWriter = new VideoWriter();
+            if(videoWriter.deleteVideo(video.get())) {
                 response = Response.ok().entity(new SuccessContract("successfully deleted")).build();
             } else {
-                response = Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorContract("error deleting the image")).build();
+                response = Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorContract("error deleting the video")).build();
             }
         } else {
             response = Response.status(Response.Status.NOT_FOUND).build();
@@ -123,10 +123,10 @@ public class ImageService {
     @DELETE
     @Produces(MediaType.APPLICATION_JSON)
     public Response deleteAllDebug() {
-        ImageWriter writer = new ImageWriter();
-        DatabaseQuery<Image> query = Database.getConnection().query(Image.class);
-        for(Image image : query.getAll()) {
-            writer.deleteImage(image);
+        VideoWriter writer = new VideoWriter();
+        DatabaseQuery<Video> query = Database.getConnection().query(Video.class);
+        for(Video video : query.getAll()) {
+            writer.deleteVideo(video);
         }
         return Response.ok().build();
     }

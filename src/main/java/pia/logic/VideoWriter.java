@@ -5,34 +5,26 @@ import pia.database.model.archive.Video;
 import pia.exceptions.CreateHashException;
 import pia.filesystem.BufferedFileWithMetaData;
 import pia.filesystem.FileSystemHelper;
-import pia.tools.FileHash;
 import pia.tools.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Optional;
 
 public class VideoWriter {
     private final Logger logger = new Logger(VideoWriter.class);
 
     public void addVideo(BufferedFileWithMetaData bufferedFile, String fileName) throws IOException, CreateHashException {
-        Optional<String> hash = FileHash.createHash(bufferedFile);
-        if(hash.isPresent()) {
-            Video video = new Video();
-            FileSystemHelper fileSystemHelper = new FileSystemHelper();
-            String fileOnDisk = video.getId().toString() + "." + fileSystemHelper.getFileExtension(fileName);
-            File file = fileSystemHelper.writeFileToDisk(bufferedFile, fileOnDisk);
-            if (file.exists()) {
-                video.setSha256Hash(hash.get());
-                video.setOriginalFileName(fileName);
-                video.setPathToFileOnDisk(file.getAbsolutePath());
-                video.setCreationTime(bufferedFile.getCreationDate());
-                Database.getConnection().insertObject(video);
-            } else {
-                logger.error("error writing file to disk");
-            }
+        Video video = new Video();
+        FileSystemHelper fileSystemHelper = new FileSystemHelper();
+        String fileOnDisk = video.getId().toString() + "." + fileSystemHelper.getFileExtension(fileName);
+        File file = fileSystemHelper.writeFileToDisk(bufferedFile, fileOnDisk);
+        if (file.exists()) {
+            video.setOriginalFileName(fileName);
+            video.setPathToFileOnDisk(file.getAbsolutePath());
+            video.setCreationTime(bufferedFile.getCreationDate());
+            Database.getConnection().insertObject(video);
         } else {
-            throw new CreateHashException();
+            logger.error("error writing file to disk");
         }
     }
 

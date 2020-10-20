@@ -1,7 +1,6 @@
 package pia.filesystem
 
 import com.drew.imaging.ImageMetadataReader
-import com.drew.imaging.ImageProcessingException
 import com.drew.metadata.Directory
 import com.drew.metadata.Metadata
 import com.drew.metadata.exif.ExifIFD0Directory
@@ -9,7 +8,6 @@ import com.drew.metadata.icc.IccDirectory
 import pia.jobs.GroupDiskFilesByCreationDate
 import pia.tools.Logger
 import java.io.ByteArrayInputStream
-import java.io.IOException
 import java.io.InputStream
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -21,25 +19,33 @@ class BufferedFileWithMetaData(bytes : ByteArray,
     : BufferedFile(bytes) {
     companion object {
         private val logger = Logger(GroupDiskFilesByCreationDate::class.java)
-        fun imageFromInputStream(inputStream : InputStream) : BufferedFileWithMetaData {
+        fun imageFromInputStream(inputStream : InputStream, fileName: String) : BufferedFileWithMetaData {
 
             val byteData = inputStream.readAllBytes()
             var creationDate : LocalDateTime? = null
             ByteArrayInputStream(byteData).use { tmpInputStream ->
-                creationDate = readImageCreationDate(tmpInputStream)?.let {
-                    LocalDateTime.ofInstant(it.toInstant(), ZoneId.systemDefault())
+                try {
+                    creationDate = readImageCreationDate(tmpInputStream)?.let {
+                        LocalDateTime.ofInstant(it.toInstant(), ZoneId.systemDefault())
+                    }
+                } catch (e : Exception) {
+                    logger.error(String.format("error reading metadata from file %s", fileName), e)
                 }
             }
             return BufferedFileWithMetaData(byteData, creationDate, MediaType.Image)
         }
 
-        fun videoFromInputStream(inputStream : InputStream) : BufferedFileWithMetaData {
+        fun videoFromInputStream(inputStream : InputStream, fileName: String) : BufferedFileWithMetaData {
 
             val byteData = inputStream.readAllBytes()
             var creationDate : LocalDateTime? = null
             ByteArrayInputStream(byteData).use { tmpInputStream ->
-                creationDate = readImageCreationDate(tmpInputStream)?.let {
-                    LocalDateTime.ofInstant(it.toInstant(), ZoneId.systemDefault())
+                try {
+                    creationDate = readImageCreationDate(tmpInputStream)?.let {
+                        LocalDateTime.ofInstant(it.toInstant(), ZoneId.systemDefault())
+                    }
+                } catch (e : Exception) {
+                    logger.error(String.format("error reading metadata from file %s", fileName), e)
                 }
             }
             return BufferedFileWithMetaData(byteData, creationDate, MediaType.Video)
@@ -64,14 +70,8 @@ class BufferedFileWithMetaData(bytes : ByteArray,
 
         private fun readImageMetaData(inputStream: InputStream): Metadata? {
             var metadata: Metadata? = null
-            try {
-                metadata = ImageMetadataReader.readMetadata(inputStream)
-                metadata.logMetaData()
-            } catch (e: ImageProcessingException) {
-                logger.error("error reading metadata from file %s", e)
-            } catch (e: IOException) {
-                logger.error("error reading metadata from file %s", e)
-            }
+            metadata = ImageMetadataReader.readMetadata(inputStream)
+            //metadata.logMetaData()
             return metadata
         }
 

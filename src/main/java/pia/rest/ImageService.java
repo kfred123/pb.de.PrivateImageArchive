@@ -65,7 +65,8 @@ public class ImageService {
                              @FormDataParam("creationTimeStamp")LocalDateTime creationTimeStamp) {
         Response response = null;
         try {
-            BufferedFileWithMetaData bufferedFile = BufferedFileWithMetaData.Companion.imageFromInputStream(imageStream);
+            BufferedFileWithMetaData bufferedFile =
+                    BufferedFileWithMetaData.Companion.imageFromInputStream(imageStream, fileName);
             ImageWriter writer = new ImageWriter();
             writer.addImage(bufferedFile, fileName);
         } catch (IOException e) {

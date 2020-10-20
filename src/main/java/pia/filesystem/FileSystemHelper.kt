@@ -18,13 +18,8 @@ class FileSystemHelper {
             year = bufferedFile.creationDate.year.toString()
             month = bufferedFile.creationDate.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
         }
-        val typeFolderName = when(bufferedFile.mediaType) {
-            MediaType.Image -> "image"
-            MediaType.Video -> "video"
-            else -> "unknown type"
-        }
         val pathToDir =
-            Path.of(Configuration.getPathToFileStorage(), year, month, bufferedFile.mediaType.name, typeFolderName)
+            Path.of(Configuration.getPathToFileStorage(), year, month, bufferedFile.mediaType.name)
         pathToDir.toFile().mkdirs()
         val file = Path.of(pathToDir.toString(), fileName).toFile()
         FileOutputStream(file).use { outputStream -> outputStream.write(bufferedFile.bytes) }

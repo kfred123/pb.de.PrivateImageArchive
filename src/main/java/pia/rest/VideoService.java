@@ -65,7 +65,8 @@ public class VideoService {
                              @FormDataParam("creationTimeStamp")LocalDateTime creationTimeStamp) {
         Response response = null;
         try {
-            BufferedFileWithMetaData bufferedFile = BufferedFileWithMetaData.Companion.videoFromInputStream(videoStream);
+            BufferedFileWithMetaData bufferedFile =
+                    BufferedFileWithMetaData.Companion.videoFromInputStream(videoStream, fileName);
             VideoWriter writer = new VideoWriter();
             writer.addVideo(bufferedFile, fileName);
         } catch (IOException e) {

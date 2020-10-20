@@ -1,48 +1,30 @@
 package pia.logic;
 
-import org.w3c.dom.Node;
-import pia.database.DataBaseConnection;
 import pia.database.Database;
-import pia.database.DbException;
 import pia.database.model.archive.Image;
 import pia.exceptions.CreateHashException;
-import pia.filesystem.BufferedFile;
 import pia.filesystem.BufferedFileWithMetaData;
 import pia.filesystem.FileSystemHelper;
-import pia.tools.FileHash;
 import pia.tools.Logger;
 
-import javax.imageio.ImageIO;
-import javax.imageio.metadata.IIOMetadata;
-import javax.imageio.stream.ImageInputStream;
-import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Iterator;
-import java.util.Optional;
 
 public class ImageWriter {
     private final Logger logger = new Logger(ImageWriter.class);
 
     public void addImage(BufferedFileWithMetaData bufferedFile, String fileName) throws IOException, CreateHashException {
-        Optional<String> hash = FileHash.createHash(bufferedFile);
-        if(hash.isPresent()) {
-            Image image = new Image();
-            FileSystemHelper fileSystemHelper = new FileSystemHelper();
-            String fileOnDisk = image.getId().toString() + "." + fileSystemHelper.getFileExtension(fileName);
-            File file = fileSystemHelper.writeFileToDisk(bufferedFile, fileOnDisk);
-            if (file.exists()) {
-                image.setSha256Hash(hash.get());
-                image.setOriginalFileName(fileName);
-                image.setPathToFileOnDisk(file.getAbsolutePath());
-                image.setCreationTime(bufferedFile.getCreationDate());
-                Database.getConnection().insertObject(image);
-            } else {
-                logger.error("error writing file to disk");
-            }
+        Image image = new Image();
+        FileSystemHelper fileSystemHelper = new FileSystemHelper();
+        String fileOnDisk = image.getId().toString() + "." + fileSystemHelper.getFileExtension(fileName);
+        File file = fileSystemHelper.writeFileToDisk(bufferedFile, fileOnDisk);
+        if (file.exists()) {
+            image.setOriginalFileName(fileName);
+            image.setPathToFileOnDisk(file.getAbsolutePath());
+            image.setCreationTime(bufferedFile.getCreationDate());
+            Database.getConnection().insertObject(image);
         } else {
-            throw new CreateHashException();
+            logger.error("error writing file to disk");
         }
     }
 

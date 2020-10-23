@@ -5,6 +5,7 @@ import com.drew.metadata.Directory
 import com.drew.metadata.Metadata
 import com.drew.metadata.exif.ExifIFD0Directory
 import com.drew.metadata.icc.IccDirectory
+import com.drew.metadata.mp4.Mp4Directory
 import pia.jobs.GroupDiskFilesByCreationDate
 import pia.tools.Logger
 import java.io.ByteArrayInputStream
@@ -53,12 +54,18 @@ class BufferedFileWithMetaData(bytes : ByteArray,
 
         private fun readImageCreationDate(inputStream: InputStream): Date? {
             val metadata = readImageMetaData(inputStream)
-            var creationDate = metadata?.tryGetTime(IccDirectory::class.java, IccDirectory.TAG_PROFILE_DATETIME)
-            if(creationDate == null) {
-                creationDate = metadata?.tryGetTime(ExifIFD0Directory::class.java, ExifIFD0Directory.TAG_DATETIME)
-            }
-            if(creationDate == null) {
-                //metadata?.logMetaData()
+            var creationDate : Date? = null
+            if(metadata != null) {
+                creationDate = metadata.tryGetTime(IccDirectory::class.java, IccDirectory.TAG_PROFILE_DATETIME)
+                if(creationDate == null) {
+                    creationDate = metadata.tryGetTime(ExifIFD0Directory::class.java, ExifIFD0Directory.TAG_DATETIME)
+                }
+                if(creationDate == null) {
+                    creationDate = metadata.tryGetTime(Mp4Directory::class.java, Mp4Directory.TAG_CREATION_TIME);
+                }
+                if(creationDate == null) {
+                    //metadata?.logMetaData()
+                }
             }
             return creationDate
         }

@@ -1,17 +1,13 @@
-
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.servlet.ServletContainer;
 import pia.database.Database;
-import pia.rest.ImageService;
-import pia.rest.MyApplication;
 
 public class StartJettyServer {
 
     // pia.rest
     public static void main(String[] args) throws Exception {
-        org.apache.log4j.BasicConfigurator.configure();
         Database.initDatabase();
 
         Server server = new Server(8080);

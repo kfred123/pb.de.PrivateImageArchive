@@ -4,12 +4,13 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.servlet.ServletContainer;
 import pia.database.Database;
 
+import javax.xml.crypto.Data;
+
 public class StartJettyServer {
 
     // pia.rest
     public static void main(String[] args) throws Exception {
-        Database.initDatabase();
-
+        Database.INSTANCE.getConnection();
         Server server = new Server(8080);
         ServletContextHandler contextHandler = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
         contextHandler.setContextPath("/");

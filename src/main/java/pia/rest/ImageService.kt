@@ -1,134 +1,165 @@
-package pia.rest;
+package pia.rest
 
-import org.eclipse.jetty.util.StringUtil;
-import org.glassfish.jersey.media.multipart.FormDataParam;
-import pia.database.Database;
-import pia.database.DatabaseQuery;
-import pia.database.model.archive.Image;
-import pia.exceptions.CreateHashException;
-import pia.filesystem.BufferedFileWithMetaData;
-import pia.logic.ImageReader;
-import pia.logic.ImageWriter;
-import pia.rest.contract.ErrorContract;
-import pia.rest.contract.ImageApiContract;
-import pia.rest.contract.ObjectList;
-import pia.rest.contract.SuccessContract;
-
-import javax.ws.rs.*;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.time.LocalDateTime;
-import java.util.Optional;
-import java.util.UUID;
+import kotlinx.dnq.query.toList
+import mu.KotlinLogging
+import org.eclipse.jetty.util.StringUtil
+import org.glassfish.jersey.media.multipart.FormDataParam
+import pia.database.Database
+import pia.database.Database.connection
+import pia.database.model.archive.Image
+import pia.exceptions.CreateHashException
+import pia.filesystem.BufferedFileWithMetaData.Companion.imageFromInputStream
+import pia.logic.ImageReader
+import pia.logic.ImageWriter
+import pia.rest.contract.ErrorContract
+import pia.rest.contract.ImageApiContract
+import pia.rest.contract.ImageApiContract.Companion.fromDb
+import pia.rest.contract.ObjectList
+import pia.rest.contract.SuccessContract
+import java.io.IOException
+import java.io.InputStream
+import java.lang.reflect.Executable
+import java.net.URI
+import java.time.LocalDateTime
+import java.util.*
+import javax.ws.rs.*
+import javax.ws.rs.core.MediaType
+import javax.ws.rs.core.Response
 
 @Path("images")
-public class ImageService {
+class ImageService {
+    val logger = KotlinLogging.logger {  }
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response queryImages() {
-        ObjectList<ImageApiContract> imageApiContractObjectList = new ObjectList<>();
-        DatabaseQuery<Image> query = Database.getConnection().query(Image.class);
-        for(Image image : query.getAll()) {
-            ImageApiContract contract = ImageApiContract.Companion.fromDb(image);
-            imageApiContractObjectList.add(contract);
+    fun queryImages(): Response {
+        var response : Response
+        response = try {
+            val imageApiContractObjectList = ObjectList<ImageApiContract>()
+            Database.connection.transactional(true) {
+                for (image in Image.all().toList()) {
+                    val contract = fromDb(image)
+                    imageApiContractObjectList.add(contract)
+                }
+            }
+            Response.ok().entity(imageApiContractObjectList).build()
+        } catch (e : java.lang.Exception) {
+            logger.error(e) {  }
+            Response.serverError().build()
         }
-        return Response.ok().entity(imageApiContractObjectList).build();
+        return response
     }
 
     @Path("checkImageExistanceByHash")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response checkImageExistanceByHash(@QueryParam("hashType") String hashType,
-                                              @QueryParam("hash") String hash) {
-        Response response;
-        String hashTypeInternal = hashType;
-        if(StringUtil.isEmpty(hashTypeInternal)) {
-            hashTypeInternal = "SHA-256";
+    fun checkImageExistanceByHash(
+        @QueryParam("hashType") hashType: String?,
+        @QueryParam("hash") hash: String?
+    ): Response {
+        var response: Response
+        try {
+            var hashTypeInternal = hashType
+            if (StringUtil.isEmpty(hashTypeInternal)) {
+                hashTypeInternal = "SHA-256"
+            }
+            val reader = ImageReader()
+            response = if (reader.findImagesBySHA256(hash!!).size > 0) {
+                Response.status(Response.Status.OK).build()
+            } else {
+                Response.status(Response.Status.NO_CONTENT).build()
+            }
+        } catch (e : java.lang.Exception) {
+            logger.error(e) { }
+            response = Response.serverError().build()
         }
-        ImageReader reader = new ImageReader();
-        if(reader.findImagesBySHA256(hash).size() > 0) {
-            response = Response.status(Response.Status.OK).build();
-        } else {
-            response = Response.status(Response.Status.NO_CONTENT).build();
-        }
-        return response;
+        return response
     }
 
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response addImage(@FormDataParam("image")InputStream imageStream,
-                             @FormDataParam("fileName")String fileName,
-                             @FormDataParam("creationTimeStamp")LocalDateTime creationTimeStamp) {
-        Response response = null;
-        try {
-            BufferedFileWithMetaData bufferedFile =
-                    BufferedFileWithMetaData.Companion.imageFromInputStream(imageStream, fileName);
-            ImageWriter writer = new ImageWriter();
-            writer.addImage(bufferedFile, fileName);
-        } catch (IOException e) {
-            response = Response.serverError().entity(new ErrorContract(e)).build();
-        } catch (CreateHashException e) {
-            response = Response.serverError().entity(new ErrorContract(e)).build();
-        } catch (Throwable e) {
-            response = Response.serverError().entity(new ErrorContract(e)).build();
+    fun addImage(
+        @FormDataParam("image") imageStream: InputStream?,
+        @FormDataParam("fileName") fileName: String?,
+        @FormDataParam("creationTimeStamp") creationTimeStamp: LocalDateTime?
+    ): Response {
+        var response: Response = try {
+            val bufferedFile = imageFromInputStream(imageStream!!, fileName!!)
+            val writer = ImageWriter()
+            writer.addImage(bufferedFile, fileName)
+            Response.created(URI.create("")).build()
+        } catch (e: IOException) {
+            Response.serverError().entity(ErrorContract(e)).build()
+        } catch (e: CreateHashException) {
+            Response.serverError().entity(ErrorContract(e)).build()
+        } catch (e: Throwable) {
+            Response.serverError().entity(ErrorContract(e)).build()
         }
-        if(response == null) {
-            response = Response.created(URI.create("")).build();
-        }
-        return response;
+        return response
     }
 
     @Path("{imageId}/getFile")
     @GET
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    public Response getImageFile(@PathParam("imageId")String imageId) {
-        UUID imaageUUID = UUID.fromString(imageId);
-        ImageReader imageReader = new ImageReader();
-        Optional<InputStream> fileStream = imageReader.getImageFileByImageIdFromDisk(imaageUUID);
-
-        Response response;
-        if(fileStream.isPresent()) {
-            response = Response.ok().entity(fileStream.get()).build();
-        } else {
-            response = Response.noContent().build();
+    fun getImageFile(@PathParam("imageId") imageId: String?): Response {
+        val response: Response = try {
+            val imaageUUID = UUID.fromString(imageId)
+            val imageReader = ImageReader()
+            val fileStream = imageReader.getImageFileByImageIdFromDisk(imaageUUID)
+            if (fileStream.isPresent) {
+                Response.ok().entity(fileStream.get()).build()
+            } else {
+                Response.noContent().build()
+            }
+        } catch (e : Exception) {
+            logger.error(e) {  }
+            Response.serverError().build()
         }
-        return response;
+        return response
     }
 
     @Path("{imageId}")
     @DELETE
     @Produces(MediaType.APPLICATION_JSON)
-    public Response deleteImage(@PathParam("imageId")String imageId) {
-        Response response;
-        UUID imageUUID = UUID.fromString(imageId);
-        ImageReader imageReader = new ImageReader();
-        Optional<Image> image = imageReader.findImageById(imageUUID);
-        if(image.isPresent()) {
-            ImageWriter imageWriter = new ImageWriter();
-            if(imageWriter.deleteImage(image.get())) {
-                response = Response.ok().entity(new SuccessContract("successfully deleted")).build();
+    fun deleteImage(@PathParam("imageId") imageId: String?): Response {
+        var response: Response
+        try {
+            val imageUUID = UUID.fromString(imageId)
+            val imageReader = ImageReader()
+            val image = imageReader.findImageById(imageUUID)
+            response = if (image.isPresent) {
+                val imageWriter = ImageWriter()
+                if (imageWriter.deleteImage(image.get())) {
+                    Response.ok().entity(SuccessContract("successfully deleted")).build()
+                } else {
+                    Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(ErrorContract("error deleting the image")).build()
+                }
             } else {
-                response = Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new ErrorContract("error deleting the image")).build();
+                Response.status(Response.Status.NOT_FOUND).build()
             }
-        } else {
-            response = Response.status(Response.Status.NOT_FOUND).build();
+        } catch (e : java.lang.Exception) {
+            logger.error(e) { }
+            response = Response.serverError().build()
         }
-        return response;
+        return response
     }
 
     @Path("deleteAllDebug")
     @DELETE
     @Produces(MediaType.APPLICATION_JSON)
-    public Response deleteAllDebug() {
-        ImageWriter writer = new ImageWriter();
-        DatabaseQuery<Image> query = Database.getConnection().query(Image.class);
-        for(Image image : query.getAll()) {
-            writer.deleteImage(image);
+    fun deleteAllDebug(): Response {
+        var response : Response
+        try {
+            val writer = ImageWriter()
+            for (image in Image.all().toList()) {
+                writer.deleteImage(image!!)
+            }
+            response = Response.ok().build()
+        } catch (e : java.lang.Exception) {
+            logger.error(e) {}
+            response = Response.serverError().build()
         }
-        return Response.ok().build();
+        return response
     }
 }

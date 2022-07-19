@@ -1,27 +1,23 @@
-package pia.tools;
+package pia.tools
 
-import pia.filesystem.BufferedFile;
+import mu.KotlinLogging
+import pia.filesystem.BufferedFile
+import java.security.MessageDigest
+import java.security.NoSuchAlgorithmException
+import java.util.*
+import kotlin.jvm.internal.Intrinsics.Kotlin
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-import java.util.Optional;
-
-public class FileHash {
-    private static final Logger logger = new pia.tools.Logger(FileHash.class);
-
-    public static Optional<String> createHash(BufferedFile file) {
-        Optional<String> result = Optional.empty();
+object FileHash {
+    private val logger = KotlinLogging.logger {  }
+    fun createHash(file: BufferedFile): Optional<String> {
+        var result: Optional<String> = Optional.empty()
         try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(file.getBytes());
-            result = Optional.ofNullable(Base64.getEncoder().encodeToString(hash));
-        } catch (NoSuchAlgorithmException e) {
-            logger.error("cannot get hash instance", e);
+            val digest = MessageDigest.getInstance("SHA-256")
+            val hash = digest.digest(file.bytes)
+            result = Optional.ofNullable(Base64.getEncoder().encodeToString(hash))
+        } catch (e: NoSuchAlgorithmException) {
+            logger.error("cannot get hash instance", e)
         }
-        return result;
+        return result
     }
 }

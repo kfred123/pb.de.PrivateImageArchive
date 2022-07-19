@@ -6,8 +6,8 @@ import com.drew.metadata.Metadata
 import com.drew.metadata.exif.ExifIFD0Directory
 import com.drew.metadata.icc.IccDirectory
 import com.drew.metadata.mp4.Mp4Directory
+import mu.KotlinLogging
 import pia.jobs.GroupDiskFilesByCreationDate
-import pia.tools.Logger
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.LocalDateTime
@@ -19,10 +19,10 @@ class BufferedFileWithMetaData(bytes : ByteArray,
                                val mediaType: MediaType)
     : BufferedFile(bytes) {
     companion object {
-        private val logger = Logger(GroupDiskFilesByCreationDate::class.java)
+        private val logger = KotlinLogging.logger {  }
         fun imageFromInputStream(inputStream : InputStream, fileName: String) : BufferedFileWithMetaData {
 
-            val byteData = inputStream.readAllBytes()
+            val byteData = inputStream.readBytes()
             var creationDate : LocalDateTime? = null
             ByteArrayInputStream(byteData).use { tmpInputStream ->
                 try {
@@ -38,7 +38,7 @@ class BufferedFileWithMetaData(bytes : ByteArray,
 
         fun videoFromInputStream(inputStream : InputStream, fileName: String) : BufferedFileWithMetaData {
 
-            val byteData = inputStream.readAllBytes()
+            val byteData = inputStream.readBytes()
             var creationDate : LocalDateTime? = null
             ByteArrayInputStream(byteData).use { tmpInputStream ->
                 try {
@@ -85,7 +85,7 @@ class BufferedFileWithMetaData(bytes : ByteArray,
         private fun Metadata.logMetaData() {
             directories.forEach {directory ->
                 directory.tags.forEach {
-                    Logger(BufferedFileWithMetaData.javaClass).info("Directory %s; tagName %s, tagType %s, value %s",
+                    logger.info("Directory {}; tagName {}, tagType {}, value {}",
                             directory.javaClass.simpleName, it.tagName, it.tagType, directory.getString(it.tagType))
                 }
             }

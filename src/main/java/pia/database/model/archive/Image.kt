@@ -1,14 +1,13 @@
 package pia.database.model.archive
 
-import org.bson.types.ObjectId
-import org.mongodb.morphia.annotations.Entity
-import org.mongodb.morphia.annotations.Id
+import jetbrains.exodus.entitystore.Entity
+import kotlinx.dnq.XdNaturalEntityType
 import pia.database.DbObject
 import java.time.LocalDateTime
-import java.util.*
 
-@Entity("Image")
-class Image : DbObject() {
+class Image(entity: Entity) : DbObject(entity) {
+    companion object : XdNaturalEntityType<Image>()
+
     var sha256Hash : String = ""
     var originalFileName: String = ""
     var pathToFileOnDisk: String = ""

@@ -1,27 +1,30 @@
 package pia.logic
 
+import kotlinx.dnq.query.*
+import mu.KotlinLogging
 import pia.database.Database
 import pia.database.model.archive.Image
 import pia.filesystem.FileSystemHelper
-import pia.tools.Logger
 import java.io.InputStream
 import java.util.*
 
 class ImageReader {
     fun findImageById(imageId: UUID): Optional<Image> {
-        return Database.getConnection().query(Image::class.java).findObject(imageId)
+        var result = Optional.empty<Image>()
+        Database.connection.transactional(true) {
+            result = Optional.ofNullable(Image.query(Image::id eq imageId).firstOrNull())
+        }
+        return result
     }
 
     fun findImagesBySHA256(sha256: String): List<Image> {
-        return Database.getConnection().query(Image::class.java) {
-            Image::sha256Hash.name equal sha256
-        }
+        return Image.query(Image::sha256Hash eq sha256).toList()
     }
 
     fun getImageFileByImageIdFromDisk(imageId: UUID): Optional<InputStream> {
         var fileStream: Optional<InputStream> = Optional.empty()
         val image = findImageById(imageId)
-        if (image!!.isPresent) {
+        if (image.isPresent) {
             val fileSystemHelper = FileSystemHelper()
             fileStream =
                 Optional.of(fileSystemHelper.readFileFromDisk(image.get().pathToFileOnDisk))
@@ -30,6 +33,6 @@ class ImageReader {
     }
 
     companion object {
-        private val logger = Logger(ImageReader::class.java)
+        private val logger = KotlinLogging.logger {  }
     }
 }

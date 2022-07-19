@@ -5,9 +5,9 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
-import java.nio.file.Path
 import java.time.format.TextStyle
 import java.util.*
+import kotlin.io.path.Path
 
 class FileSystemHelper {
 
@@ -19,9 +19,9 @@ class FileSystemHelper {
             month = bufferedFile.creationDate.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
         }
         val pathToDir =
-            Path.of(Configuration.getPathToFileStorage(), year, month, bufferedFile.mediaType.name)
+            Path(Configuration.getPathToFileStorage(), year, month, bufferedFile.mediaType.name)
         pathToDir.toFile().mkdirs()
-        val file = Path.of(pathToDir.toString(), fileName).toFile()
+        val file = Path(pathToDir.toString(), fileName).toFile()
         FileOutputStream(file).use { outputStream -> outputStream.write(bufferedFile.bytes) }
         return file
     }

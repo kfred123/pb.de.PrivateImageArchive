@@ -3,9 +3,7 @@ package pia.rest.contract
 import pia.database.model.archive.Video
 import java.time.LocalDateTime
 import java.util.*
-import javax.xml.bind.annotation.XmlRootElement
 
-@XmlRootElement
 class VideoApiContract(val id : UUID) {
     var fileName : String = ""
     var sha256Hash : String = ""

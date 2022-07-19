@@ -1,27 +1,30 @@
 package pia.logic
 
-import pia.database.Database
+import kotlinx.dnq.query.eq
+import kotlinx.dnq.query.firstOrNull
+import kotlinx.dnq.query.query
+import kotlinx.dnq.query.toList
+import mu.KotlinLogging
 import pia.database.model.archive.Video
 import pia.filesystem.FileSystemHelper
-import pia.tools.Logger
 import java.io.InputStream
 import java.util.*
+import kotlin.jvm.internal.Intrinsics.Kotlin
+
 
 class VideoReader {
     fun findVideoById(videoId: UUID): Optional<Video> {
-        return Database.getConnection().query(Video::class.java).findObject(videoId)
+        return Optional.ofNullable(Video.query(Video::id eq videoId).firstOrNull())
     }
 
     fun findVideosBySHA256(sha256: String): List<Video> {
-        return Database.getConnection().query(Video::class.java) {
-            Video::sha256Hash.name equal sha256
-        }
+        return Video.query(Video::sha256Hash eq sha256).toList()
     }
 
     fun getVideoFileByVideoIdFromDisk(videoId: UUID): Optional<InputStream> {
         var fileStream: Optional<InputStream> = Optional.empty()
         val video = findVideoById(videoId)
-        if (video!!.isPresent) {
+        if (video.isPresent) {
             val fileSystemHelper = FileSystemHelper()
             fileStream =
                 Optional.of(fileSystemHelper.readFileFromDisk(video.get().pathToFileOnDisk))
@@ -30,6 +33,6 @@ class VideoReader {
     }
 
     companion object {
-        private val logger = Logger(VideoReader::class.java)
+        private val logger = KotlinLogging.logger {  }
     }
 }

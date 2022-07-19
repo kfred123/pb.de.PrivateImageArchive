@@ -1,10 +1,8 @@
 package pia.rest.contract;
 
-import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
 
-@XmlRootElement
 public class ObjectList<T> {
     long totalCount = 0;
 

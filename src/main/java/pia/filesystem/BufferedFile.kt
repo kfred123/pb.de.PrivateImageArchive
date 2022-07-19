@@ -6,7 +6,7 @@ import java.io.InputStream
 open class BufferedFile(val bytes : ByteArray) {
     companion object {
         fun fromInputStream(inputStream : InputStream) : BufferedFile {
-            return BufferedFile(inputStream.readAllBytes())
+            return BufferedFile(inputStream.readBytes())
         }
     }
 }

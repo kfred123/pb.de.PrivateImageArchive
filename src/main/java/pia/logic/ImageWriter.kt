@@ -38,10 +38,10 @@ class ImageWriter {
             if (fileSystemHelper.fileExists(imageFile)) {
                 if (!fileSystemHelper.deleteFileFromDisk(imageFile)) {
                     deleteFromDb = false
-                    logger.error("could not imagefile from disk %s, db-entry will not be deleted", imageFile)
+                    logger.error("could not imagefile from disk {}, db-entry will not be deleted", imageFile)
                 }
             } else {
-                logger.warn("deleting image %s, file %s does not exist", image.id, image.pathToFileOnDisk)
+                logger.warn("deleting image {}, file {} does not exist", image.id, image.pathToFileOnDisk)
             }
             if (deleteFromDb) {
                 image.delete()

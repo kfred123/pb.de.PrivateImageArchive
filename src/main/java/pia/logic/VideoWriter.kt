@@ -37,10 +37,10 @@ class VideoWriter {
             if (fileSystemHelper.fileExists(videoFile)) {
                 if (!fileSystemHelper.deleteFileFromDisk(videoFile)) {
                     deleteFromDb = false
-                    logger.error("could not delete videofile from disk %s, db-entry will not be deleted", videoFile)
+                    logger.error("could not delete videofile from disk {}, db-entry will not be deleted", videoFile)
                 }
             } else {
-                logger.warn("deleting video %s, file %s does not exist", video.id, video.pathToFileOnDisk)
+                logger.warn("deleting video {}, file {} does not exist", video.id, video.pathToFileOnDisk)
             }
             if (deleteFromDb) {
                 video.delete()

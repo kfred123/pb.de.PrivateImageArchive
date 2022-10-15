@@ -152,8 +152,10 @@ class ImageService {
         var response : Response
         try {
             val writer = ImageWriter()
-            for (image in Image.all().toList()) {
-                writer.deleteImage(image!!)
+            Database.connection.transactional {
+                for (image in Image.all().toList()) {
+                    writer.deleteImage(image!!)
+                }
             }
             response = Response.ok().build()
         } catch (e : java.lang.Exception) {

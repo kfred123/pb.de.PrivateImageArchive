@@ -28,9 +28,11 @@ class VideoService {
     @Produces(MediaType.APPLICATION_JSON)
     fun queryVideos(): Response {
         val videoApiContractObjectList: ObjectList<VideoApiContract> = ObjectList<VideoApiContract>()
-        for (video in Video.all().toList()) {
-            val contract: VideoApiContract = VideoApiContract.Companion.fromDb(video)
-            videoApiContractObjectList.add(contract)
+        Database.connection.transactional {
+            for (video in Video.all().toList()) {
+                val contract: VideoApiContract = VideoApiContract.Companion.fromDb(video)
+                videoApiContractObjectList.add(contract)
+            }
         }
         return Response.ok().entity(videoApiContractObjectList).build()
     }
@@ -126,8 +128,10 @@ class VideoService {
     @Produces(MediaType.APPLICATION_JSON)
     fun deleteAllDebug(): Response {
         val writer = VideoWriter()
-        for (video in Video.all().toList()) {
-            writer.deleteVideo(video)
+        Database.connection.transactional {
+            for (video in Video.all().toList()) {
+                writer.deleteVideo(video)
+            }
         }
         return Response.ok().build()
     }

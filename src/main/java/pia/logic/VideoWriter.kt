@@ -20,7 +20,7 @@ class VideoWriter {
                 if (file.exists()) {
                     originalFileName = fileName
                     pathToFileOnDisk = file.absolutePath
-                    creationTime = bufferedFile.creationDate
+                    creationTime = bufferedFile.mediaItemInfo.getCreationDate()
                 } else {
                     logger.error("error writing file to disk")
                 }

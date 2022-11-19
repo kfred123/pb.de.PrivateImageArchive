@@ -21,7 +21,7 @@ class ImageWriter {
                 if (file.exists()) {
                     originalFileName = fileName
                     pathToFileOnDisk = file.absolutePath
-                    creationTime = bufferedFile.creationDate
+                    creationTime = bufferedFile.mediaItemInfo.getCreationDate()
                 } else {
                     logger.error("error writing file to disk")
                 }
@@ -41,7 +41,8 @@ class ImageWriter {
                     logger.error("could not imagefile from disk {}, db-entry will not be deleted", imageFile)
                 }
             } else {
-                logger.warn("deleting image {}, file {} does not exist", image.id, image.pathToFileOnDisk)
+                logger.warn("deleting image ${image.id}, file ${image.pathToFileOnDisk} does not exist")
+                deleteFromDb = false
             }
             if (deleteFromDb) {
                 image.delete()

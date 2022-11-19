@@ -3,6 +3,7 @@ package pia.database.model.archive
 import jetbrains.exodus.entitystore.Entity
 import kotlinx.dnq.XdNaturalEntityType
 import pia.database.DbObject
+import pia.logic.tools.MediaItemInfo
 import java.time.LocalDateTime
 
 class Video(entity: Entity) : DbObject(entity) {

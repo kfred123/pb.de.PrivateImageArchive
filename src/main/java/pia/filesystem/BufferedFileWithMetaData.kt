@@ -8,14 +8,18 @@ import com.drew.metadata.icc.IccDirectory
 import com.drew.metadata.mp4.Mp4Directory
 import mu.KotlinLogging
 import pia.jobs.GroupDiskFilesByCreationDate
+import pia.logic.tools.ImageInfoReader
+import pia.logic.tools.MediaItemInfo
+import pia.logic.tools.VideoInfoReader
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.*
+import javax.print.attribute.standard.Media
 
 class BufferedFileWithMetaData(bytes : ByteArray,
-                               val creationDate: LocalDateTime?,
+                               val mediaItemInfo : MediaItemInfo,
                                val mediaType: MediaType)
     : BufferedFile(bytes) {
     companion object {
@@ -23,72 +27,31 @@ class BufferedFileWithMetaData(bytes : ByteArray,
         fun imageFromInputStream(inputStream : InputStream, fileName: String) : BufferedFileWithMetaData {
 
             val byteData = inputStream.readBytes()
-            var creationDate : LocalDateTime? = null
+            var mediaItemInfo : MediaItemInfo? = null
             ByteArrayInputStream(byteData).use { tmpInputStream ->
                 try {
-                    creationDate = readImageCreationDate(tmpInputStream)?.let {
-                        LocalDateTime.ofInstant(it.toInstant(), ZoneId.systemDefault())
-                    }
+                    mediaItemInfo = ImageInfoReader().readImageInfo(tmpInputStream)
                 } catch (e : Exception) {
                     logger.error(String.format("error reading metadata from file %s", fileName), e)
                 }
             }
-            return BufferedFileWithMetaData(byteData, creationDate, MediaType.Image)
+            return BufferedFileWithMetaData(byteData, mediaItemInfo!!, MediaType.Image)
         }
 
         fun videoFromInputStream(inputStream : InputStream, fileName: String) : BufferedFileWithMetaData {
 
             val byteData = inputStream.readBytes()
-            var creationDate : LocalDateTime? = null
+            var mediaItemInfo : MediaItemInfo? = null
             ByteArrayInputStream(byteData).use { tmpInputStream ->
                 try {
-                    creationDate = readImageCreationDate(tmpInputStream)?.let {
-                        LocalDateTime.ofInstant(it.toInstant(), ZoneId.systemDefault())
-                    }
+                    mediaItemInfo = VideoInfoReader().readVideoInfo(tmpInputStream)
                 } catch (e : Exception) {
                     logger.error(String.format("error reading metadata from file %s", fileName), e)
                 }
             }
-            return BufferedFileWithMetaData(byteData, creationDate, MediaType.Video)
+            return BufferedFileWithMetaData(byteData, mediaItemInfo!!, MediaType.Video)
         }
 
-        private fun readImageCreationDate(inputStream: InputStream): Date? {
-            val metadata = readImageMetaData(inputStream)
-            var creationDate : Date? = null
-            if(metadata != null) {
-                creationDate = metadata.tryGetTime(IccDirectory::class.java, IccDirectory.TAG_PROFILE_DATETIME)
-                if(creationDate == null) {
-                    creationDate = metadata.tryGetTime(ExifIFD0Directory::class.java, ExifIFD0Directory.TAG_DATETIME)
-                }
-                if(creationDate == null) {
-                    creationDate = metadata.tryGetTime(Mp4Directory::class.java, Mp4Directory.TAG_CREATION_TIME);
-                }
-                if(creationDate == null) {
-                    //metadata?.logMetaData()
-                }
-            }
-            return creationDate
-        }
 
-        private fun <T : Directory> Metadata.tryGetTime(directoryClass: Class<T>, tag : Int) : Date?{
-            val directory = getFirstDirectoryOfType(directoryClass)
-            return directory?.getDate(tag)
-        }
-
-        private fun readImageMetaData(inputStream: InputStream): Metadata? {
-            var metadata: Metadata? = null
-            metadata = ImageMetadataReader.readMetadata(inputStream)
-            //metadata.logMetaData()
-            return metadata
-        }
-
-        private fun Metadata.logMetaData() {
-            directories.forEach {directory ->
-                directory.tags.forEach {
-                    logger.info("Directory {}; tagName {}, tagType {}, value {}",
-                            directory.javaClass.simpleName, it.tagName, it.tagType, directory.getString(it.tagType))
-                }
-            }
-        }
     }
 }

@@ -14,10 +14,8 @@ class FileSystemHelper {
     fun writeFileToDisk(bufferedFile: BufferedFileWithMetaData, fileName: String) : File {
         var year = "unknownyear"
         var month = "unknownmonth"
-        if(bufferedFile.creationDate != null) {
-            year = bufferedFile.creationDate.year.toString()
-            month = bufferedFile.creationDate.month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
-        }
+        year = bufferedFile.mediaItemInfo.getCreationDate().year.toString()
+        month = bufferedFile.mediaItemInfo.getCreationDate().month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH)
         val pathToDir =
             Path(Configuration.getPathToFileStorage(), year, month, bufferedFile.mediaType.name)
         pathToDir.toFile().mkdirs()

@@ -1,6 +1,7 @@
 package pia.rest
 
 import kotlinx.dnq.query.toList
+import mu.KotlinLogging
 import org.eclipse.jetty.util.StringUtil
 import org.glassfish.jersey.media.multipart.FormDataParam
 import pia.database.Database
@@ -13,6 +14,7 @@ import pia.rest.contract.ErrorContract
 import pia.rest.contract.ObjectList
 import pia.rest.contract.SuccessContract
 import pia.rest.contract.VideoApiContract
+import pia.tools.CurrentRunningUploadCounter
 import java.io.IOException
 import java.io.InputStream
 import java.net.URI
@@ -24,18 +26,30 @@ import javax.ws.rs.core.Response
 
 @Path("videos")
 class VideoService {
+    val logger = KotlinLogging.logger {  }
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    fun queryVideos(): Response {
+    fun queryVideos(
+        @QueryParam("embed") embedDetails : String?
+    ): Response {
         val videoApiContractObjectList: ObjectList<VideoApiContract> = ObjectList<VideoApiContract>()
-        Database.connection.transactional {
-            for (video in Video.all().toList()) {
-                val contract: VideoApiContract = VideoApiContract.Companion.fromDb(video)
-                videoApiContractObjectList.add(contract)
+        try {
+            Database.connection.transactional {
+                for (video in Video.all().toList()) {
+                    val contract: VideoApiContract = VideoApiContract.fromDbAndEmbedInfos(
+                        video,
+                        CommaSeparatedOptionsParser(embedDetails)
+                    )
+                    videoApiContractObjectList.add(contract)
+                }
             }
+        } catch (e : java.lang.Exception) {
+            logger.error("error reading videos", e)
         }
         return Response.ok().entity(videoApiContractObjectList).build()
     }
+
+    // ToDo endpoint to add creationTime to video infos
 
     @Path("checkVideoExistanceByHash")
     @GET
@@ -66,23 +80,26 @@ class VideoService {
         @FormDataParam("fileName") fileName: String?,
         @FormDataParam("creationTimeStamp") creationTimeStamp: LocalDateTime?
     ): Response? {
-        var response: Response? = null
-        try {
-            val bufferedFile: BufferedFileWithMetaData =
-                BufferedFileWithMetaData.Companion.videoFromInputStream(videoStream!!, fileName!!)
-            val writer = VideoWriter()
-            writer.addVideo(bufferedFile, fileName)
-        } catch (e: IOException) {
-            response = Response.serverError().entity(ErrorContract(e)).build()
-        } catch (e: CreateHashException) {
-            response = Response.serverError().entity(ErrorContract(e)).build()
-        } catch (e: Throwable) {
-            response = Response.serverError().entity(ErrorContract(e)).build()
+        videoStream.use {
+            CurrentRunningUploadCounter().use {
+                logger.info("CurrentRunningUploads: " + CurrentRunningUploadCounter.currentRunningUploads)
+                // ToDo SCHWERWIEGEND: UnknownBox{type=    } might have been truncated by file end. bytesRead=13743 contentSize=1751411818 (added catch already)
+                var response: Response? = null
+                try {
+                    val bufferedFile: BufferedFileWithMetaData =
+                        BufferedFileWithMetaData.Companion.videoFromInputStream(videoStream!!, fileName!!)
+                    val writer = VideoWriter()
+                    writer.addVideo(bufferedFile, fileName)
+                } catch (e: Throwable) {
+                    logger.error("error adding video", e);
+                    response = Response.serverError().entity(ErrorContract(e)).build()
+                }
+                if (response == null) {
+                    response = Response.created(URI.create("")).build()
+                }
+                return response
+            }
         }
-        if (response == null) {
-            response = Response.created(URI.create("")).build()
-        }
-        return response
     }
 
     @Path("{videoId}/getFile")

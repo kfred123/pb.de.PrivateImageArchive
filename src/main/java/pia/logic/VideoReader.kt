@@ -25,11 +25,16 @@ class VideoReader {
         var fileStream: Optional<InputStream> = Optional.empty()
         val video = findVideoById(videoId)
         if (video.isPresent) {
-            val fileSystemHelper = FileSystemHelper()
-            fileStream =
-                Optional.of(fileSystemHelper.readFileFromDisk(video.get().pathToFileOnDisk))
+            fileStream = Optional.ofNullable(getVideoFileStream(video.get()))
         }
         return fileStream
+    }
+
+    fun getVideoFileStream(
+        video: Video
+    ): InputStream {
+        val fileSystemHelper = FileSystemHelper()
+        return fileSystemHelper.readFileFromDisk(video.pathToFileOnDisk)
     }
 
     companion object {

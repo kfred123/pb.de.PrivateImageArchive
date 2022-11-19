@@ -16,6 +16,7 @@ import pia.rest.contract.ImageApiContract
 import pia.rest.contract.ImageApiContract.Companion.fromDb
 import pia.rest.contract.ObjectList
 import pia.rest.contract.SuccessContract
+import pia.tools.CurrentRunningUploadCounter
 import java.io.IOException
 import java.io.InputStream
 import java.lang.reflect.Executable
@@ -83,19 +84,25 @@ class ImageService {
         @FormDataParam("fileName") fileName: String?,
         @FormDataParam("creationTimeStamp") creationTimeStamp: LocalDateTime?
     ): Response {
-        var response: Response = try {
-            val bufferedFile = imageFromInputStream(imageStream!!, fileName!!)
-            val writer = ImageWriter()
-            writer.addImage(bufferedFile, fileName)
-            Response.created(URI.create("")).build()
-        } catch (e: IOException) {
-            Response.serverError().entity(ErrorContract(e)).build()
-        } catch (e: CreateHashException) {
-            Response.serverError().entity(ErrorContract(e)).build()
-        } catch (e: Throwable) {
-            Response.serverError().entity(ErrorContract(e)).build()
+        imageStream.use {
+            CurrentRunningUploadCounter().use {
+                logger.info("CurrentRunningUploads: " + CurrentRunningUploadCounter.currentRunningUploads)
+                var response: Response = try {
+                    val bufferedFile = imageFromInputStream(imageStream!!, fileName!!)
+                    val writer = ImageWriter()
+                    writer.addImage(bufferedFile, fileName)
+                    Response.created(URI.create("")).build()
+                } catch (e: IOException) {
+                    Response.serverError().entity(ErrorContract(e)).build()
+                } catch (e: CreateHashException) {
+                    Response.serverError().entity(ErrorContract(e)).build()
+                } catch (e: Throwable) {
+                    Response.serverError().entity(ErrorContract(e)).build()
+                }
+                return response
+            }
         }
-        return response
+        // ToDo imagepath is empty for some
     }
 
     @Path("{imageId}/getFile")

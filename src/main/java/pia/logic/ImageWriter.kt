@@ -29,7 +29,7 @@ class ImageWriter {
         }
     }
 
-    fun deleteImage(image: Image): Boolean {
+    fun deleteImage(image: Image, force : Boolean): Boolean {
         var deleted = false
         Database.connection.transactional {
             val imageFile = image.pathToFileOnDisk
@@ -37,12 +37,12 @@ class ImageWriter {
             var deleteFromDb = true
             if (fileSystemHelper.fileExists(imageFile)) {
                 if (!fileSystemHelper.deleteFileFromDisk(imageFile)) {
-                    deleteFromDb = false
-                    logger.error("could not imagefile from disk {}, db-entry will not be deleted", imageFile)
+                    deleteFromDb = force
+                    logger.error("could not delete imagefile from disk $imageFile, delete db-entry: $force")
                 }
             } else {
-                logger.warn("deleting image ${image.id}, file ${image.pathToFileOnDisk} does not exist")
-                deleteFromDb = false
+                logger.warn("deleting image ${image.id}, file ${image.pathToFileOnDisk} does not exist, delete db-entry: $force")
+                deleteFromDb = force
             }
             if (deleteFromDb) {
                 image.delete()

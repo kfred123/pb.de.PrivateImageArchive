@@ -8,6 +8,7 @@ import pia.database.Database
 import pia.database.Database.connection
 import pia.database.model.archive.Image
 import pia.exceptions.CreateHashException
+import pia.exceptions.InternalException
 import pia.filesystem.BufferedFileWithMetaData.Companion.imageFromInputStream
 import pia.logic.ImageReader
 import pia.logic.ImageWriter
@@ -136,7 +137,7 @@ class ImageService {
             val image = imageReader.findImageById(imageUUID)
             response = if (image.isPresent) {
                 val imageWriter = ImageWriter()
-                if (imageWriter.deleteImage(image.get())) {
+                if (imageWriter.deleteImage(image.get(), false)) {
                     Response.ok().entity(SuccessContract("successfully deleted")).build()
                 } else {
                     Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -161,7 +162,9 @@ class ImageService {
             val writer = ImageWriter()
             Database.connection.transactional {
                 for (image in Image.all().toList()) {
-                    writer.deleteImage(image!!)
+                    if(!writer.deleteImage(image, true)) {
+                        throw InternalException("unable to delete image ${image.pathToFileOnDisk}")
+                    }
                 }
             }
             response = Response.ok().build()

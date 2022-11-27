@@ -145,6 +145,7 @@ class VideoService {
     @Produces(MediaType.APPLICATION_JSON)
     fun deleteAllDebug(): Response {
         val writer = VideoWriter()
+        // ToDo force delete (see deleteAllImages)
         Database.connection.transactional {
             for (video in Video.all().toList()) {
                 writer.deleteVideo(video)

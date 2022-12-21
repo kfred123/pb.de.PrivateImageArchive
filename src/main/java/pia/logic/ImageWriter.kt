@@ -1,5 +1,6 @@
 package pia.logic
 
+import com.drew.lang.StringUtil
 import mu.KotlinLogging
 import pia.database.Database
 import pia.database.model.archive.Image
@@ -25,6 +26,9 @@ class ImageWriter {
                 } else {
                     logger.error("error writing file to disk")
                 }
+                if(originalFileName.isBlank()) {
+                    var x = 0
+                }
             }
         }
     }
@@ -42,7 +46,6 @@ class ImageWriter {
                 }
             } else {
                 logger.warn("deleting image ${image.id}, file ${image.pathToFileOnDisk} does not exist, delete db-entry: $force")
-                deleteFromDb = force
             }
             if (deleteFromDb) {
                 image.delete()

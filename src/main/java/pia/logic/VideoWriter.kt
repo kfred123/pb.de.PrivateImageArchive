@@ -28,7 +28,7 @@ class VideoWriter {
         }
     }
 
-    fun deleteVideo(video: Video): Boolean {
+    fun deleteVideo(video: Video, force : Boolean): Boolean {
         var deleted = false
         Database.connection.transactional {
             val videoFile = video.pathToFileOnDisk
@@ -36,8 +36,8 @@ class VideoWriter {
             var deleteFromDb = true
             if (fileSystemHelper.fileExists(videoFile)) {
                 if (!fileSystemHelper.deleteFileFromDisk(videoFile)) {
-                    deleteFromDb = false
-                    logger.error("could not delete videofile from disk {}, db-entry will not be deleted", videoFile)
+                    deleteFromDb = force
+                    logger.error("could not delete videofile from disk $videoFile, delete db-entry: $force")
                 }
             } else {
                 logger.warn("deleting video {}, file {} does not exist", video.id, video.pathToFileOnDisk)

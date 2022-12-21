@@ -12,8 +12,12 @@ import java.util.*
 
 class VideoInfoReader {
     fun readVideoInfo(inputStream : InputStream) : VideoInfo? {
-
-        var isoFile = IsoFile(Channels.newChannel(inputStream))
-        return VideoInfo(isoFile.movieBox)
+        var videoInfo : VideoInfo
+        Channels.newChannel(inputStream).use {
+            IsoFile(it).use {
+                videoInfo = VideoInfo(it.movieBox)
+            }
+        }
+        return videoInfo
     }
 }

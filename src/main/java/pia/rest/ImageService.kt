@@ -1,6 +1,9 @@
 package pia.rest
 
-import kotlinx.dnq.query.toList
+import jetbrains.exodus.query.GetAll
+import jetbrains.exodus.query.NodeBase
+import kotlinx.dnq.XdNaturalEntityType
+import kotlinx.dnq.query.*
 import mu.KotlinLogging
 import org.eclipse.jetty.util.StringUtil
 import org.glassfish.jersey.media.multipart.FormDataParam
@@ -33,12 +36,13 @@ class ImageService {
     val logger = KotlinLogging.logger {  }
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    fun queryImages(): Response {
+    fun queryImages(@QueryParam("missingFilePath") missingFilePath : Boolean): Response {
         var response : Response
         response = try {
             val imageApiContractObjectList = ObjectList<ImageApiContract>()
-            Database.connection.transactional(true) {
-                for (image in Image.all().toList()) {
+            connection.transactional(true) {
+
+                for (image in Image.query(applyFilter(missingFilePath)).toList()) {
                     val contract = fromDb(image)
                     imageApiContractObjectList.add(contract)
                 }
@@ -49,6 +53,17 @@ class ImageService {
             Response.serverError().build()
         }
         return response
+    }
+
+    private fun applyFilter(missingFilePath: Boolean) : NodeBase {
+        var nodeBase : NodeBase? = null
+        if(missingFilePath) {
+            nodeBase = Image::pathToFileOnDisk eq ""
+        }
+        if(nodeBase == null) {
+            nodeBase = GetAll()
+        }
+        return nodeBase
     }
 
     @Path("checkImageExistanceByHash")

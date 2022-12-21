@@ -1,10 +1,13 @@
 package pia.rest
 
-import kotlinx.dnq.query.toList
+import jetbrains.exodus.query.GetAll
+import jetbrains.exodus.query.NodeBase
+import kotlinx.dnq.query.*
 import mu.KotlinLogging
 import org.eclipse.jetty.util.StringUtil
 import org.glassfish.jersey.media.multipart.FormDataParam
 import pia.database.Database
+import pia.database.model.archive.Image
 import pia.database.model.archive.Video
 import pia.exceptions.CreateHashException
 import pia.filesystem.BufferedFileWithMetaData
@@ -30,12 +33,13 @@ class VideoService {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     fun queryVideos(
-        @QueryParam("embed") embedDetails : String?
+        @QueryParam("embed") embedDetails : String?,
+        @QueryParam("missingFilePath") missingFilePath : Boolean
     ): Response {
         val videoApiContractObjectList: ObjectList<VideoApiContract> = ObjectList<VideoApiContract>()
         try {
             Database.connection.transactional {
-                for (video in Video.all().toList()) {
+                for (video in Video.query(applyFilter(missingFilePath)).toList()) {
                     val contract: VideoApiContract = VideoApiContract.fromDbAndEmbedInfos(
                         video,
                         CommaSeparatedOptionsParser(embedDetails)
@@ -47,6 +51,16 @@ class VideoService {
             logger.error("error reading videos", e)
         }
         return Response.ok().entity(videoApiContractObjectList).build()
+    }
+    private fun applyFilter(missingFilePath: Boolean) : NodeBase {
+        var nodeBase : NodeBase? = null
+        if(missingFilePath) {
+            nodeBase = Video::pathToFileOnDisk eq ""
+        }
+        if(nodeBase == null) {
+            nodeBase = GetAll()
+        }
+        return nodeBase
     }
 
     // ToDo endpoint to add creationTime to video infos
@@ -128,7 +142,7 @@ class VideoService {
         val video: Optional<Video> = videoReader.findVideoById(videoUuid)
         response = if (video.isPresent()) {
             val videoWriter = VideoWriter()
-            if (videoWriter.deleteVideo(video.get())) {
+            if (videoWriter.deleteVideo(video.get(), false)) {
                 Response.ok().entity(SuccessContract("successfully deleted")).build()
             } else {
                 Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -145,10 +159,9 @@ class VideoService {
     @Produces(MediaType.APPLICATION_JSON)
     fun deleteAllDebug(): Response {
         val writer = VideoWriter()
-        // ToDo force delete (see deleteAllImages)
         Database.connection.transactional {
             for (video in Video.all().toList()) {
-                writer.deleteVideo(video)
+                writer.deleteVideo(video, true)
             }
         }
         return Response.ok().build()

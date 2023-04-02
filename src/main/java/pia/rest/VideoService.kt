@@ -7,18 +7,15 @@ import mu.KotlinLogging
 import org.eclipse.jetty.util.StringUtil
 import org.glassfish.jersey.media.multipart.FormDataParam
 import pia.database.Database
-import pia.database.model.archive.Image
 import pia.database.model.archive.Video
-import pia.exceptions.CreateHashException
-import pia.filesystem.BufferedFileWithMetaData
+import pia.logic.FileStager
 import pia.logic.VideoReader
 import pia.logic.VideoWriter
 import pia.rest.contract.ErrorContract
 import pia.rest.contract.ObjectList
 import pia.rest.contract.SuccessContract
 import pia.rest.contract.VideoApiContract
-import pia.tools.CurrentRunningUploadCounter
-import java.io.IOException
+import pia.tools.CurrentRunningUploadUtil
 import java.io.InputStream
 import java.net.URI
 import java.time.LocalDateTime
@@ -90,22 +87,18 @@ class VideoService {
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
     fun addVideo(
-        @FormDataParam("video") videoStream: InputStream?,
+        @FormDataParam("video") videoStream: InputStream,
         @FormDataParam("fileName") fileName: String?,
         @FormDataParam("creationTimeStamp") creationTimeStamp: LocalDateTime?
     ): Response? {
         videoStream.use {
-            CurrentRunningUploadCounter().use {
-                logger.info("CurrentRunningUploads: " + CurrentRunningUploadCounter.currentRunningUploads)
-                // ToDo SCHWERWIEGEND: UnknownBox{type=    } might have been truncated by file end. bytesRead=13743 contentSize=1751411818 (added catch already)
+            CurrentRunningUploadUtil().use {
+                //logger.info("CurrentRunningUploads: " + CurrentRunningUploadCounter.currentRunningUploads)
                 var response: Response? = null
                 try {
-                    val bufferedFile: BufferedFileWithMetaData =
-                        BufferedFileWithMetaData.Companion.videoFromInputStream(videoStream!!, fileName!!)
-                    val writer = VideoWriter()
-                    writer.addVideo(bufferedFile, fileName)
+                    FileStager().stageFile(videoStream, fileName.orEmpty(), FileStager.StagedType.Video)
                 } catch (e: Throwable) {
-                    logger.error("error adding video", e);
+                    logger.error(String.format("error adding video %s", fileName), e);
                     response = Response.serverError().entity(ErrorContract(e)).build()
                 }
                 if (response == null) {

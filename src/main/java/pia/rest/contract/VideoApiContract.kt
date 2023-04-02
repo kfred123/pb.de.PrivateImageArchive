@@ -22,7 +22,7 @@ class VideoApiContract(val id : UUID) {
             apiContract.creationTime = video.creationTime
             apiContract.pathToFileNameOnDisk = video.pathToFileOnDisk
             if(options.isEnabled("videoMetaInfo")) {
-                val info = VideoInfoReader().readVideoInfo(VideoReader().getVideoFileStream(video))
+                val info = VideoInfoReader().readVideoInfo(VideoReader().getVideoFile(video))
                 apiContract.videoInfoRawData = info
             }
             return apiContract

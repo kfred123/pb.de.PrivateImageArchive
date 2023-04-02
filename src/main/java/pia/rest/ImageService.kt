@@ -2,7 +2,6 @@ package pia.rest
 
 import jetbrains.exodus.query.GetAll
 import jetbrains.exodus.query.NodeBase
-import kotlinx.dnq.XdNaturalEntityType
 import kotlinx.dnq.query.*
 import mu.KotlinLogging
 import org.eclipse.jetty.util.StringUtil
@@ -10,9 +9,8 @@ import org.glassfish.jersey.media.multipart.FormDataParam
 import pia.database.Database
 import pia.database.Database.connection
 import pia.database.model.archive.Image
-import pia.exceptions.CreateHashException
 import pia.exceptions.InternalException
-import pia.filesystem.BufferedFileWithMetaData.Companion.imageFromInputStream
+import pia.logic.FileStager
 import pia.logic.ImageReader
 import pia.logic.ImageWriter
 import pia.rest.contract.ErrorContract
@@ -20,10 +18,8 @@ import pia.rest.contract.ImageApiContract
 import pia.rest.contract.ImageApiContract.Companion.fromDb
 import pia.rest.contract.ObjectList
 import pia.rest.contract.SuccessContract
-import pia.tools.CurrentRunningUploadCounter
-import java.io.IOException
+import pia.tools.CurrentRunningUploadUtil
 import java.io.InputStream
-import java.lang.reflect.Executable
 import java.net.URI
 import java.time.LocalDateTime
 import java.util.*
@@ -96,23 +92,18 @@ class ImageService {
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
     fun addImage(
-        @FormDataParam("image") imageStream: InputStream?,
+        @FormDataParam("image") imageStream: InputStream,
         @FormDataParam("fileName") fileName: String?,
         @FormDataParam("creationTimeStamp") creationTimeStamp: LocalDateTime?
     ): Response {
         imageStream.use {
-            CurrentRunningUploadCounter().use {
-                logger.info("CurrentRunningUploads: " + CurrentRunningUploadCounter.currentRunningUploads)
+            CurrentRunningUploadUtil().use {
+                //logger.info("CurrentRunningUploads: " + CurrentRunningUploadCounter.currentRunningUploads)
                 var response: Response = try {
-                    val bufferedFile = imageFromInputStream(imageStream!!, fileName!!)
-                    val writer = ImageWriter()
-                    writer.addImage(bufferedFile, fileName)
+                    FileStager().stageFile(imageStream, fileName.orEmpty(), FileStager.StagedType.Image)
                     Response.created(URI.create("")).build()
-                } catch (e: IOException) {
-                    Response.serverError().entity(ErrorContract(e)).build()
-                } catch (e: CreateHashException) {
-                    Response.serverError().entity(ErrorContract(e)).build()
                 } catch (e: Throwable) {
+                    logger.error(String.format("error adding image %s", fileName), e);
                     Response.serverError().entity(ErrorContract(e)).build()
                 }
                 return response

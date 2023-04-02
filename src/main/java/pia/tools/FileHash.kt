@@ -1,15 +1,13 @@
 package pia.tools
 
 import mu.KotlinLogging
-import pia.filesystem.BufferedFile
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 import java.util.*
-import kotlin.jvm.internal.Intrinsics.Kotlin
 
 object FileHash {
     private val logger = KotlinLogging.logger {  }
-    fun createHash(file: BufferedFile): Optional<String> {
+    /*fun createHash(file: BufferedFile): Optional<String> {
         var result: Optional<String> = Optional.empty()
         try {
             val digest = MessageDigest.getInstance("SHA-256")
@@ -19,5 +17,5 @@ object FileHash {
             logger.error("cannot get hash instance", e)
         }
         return result
-    }
+    }*/
 }

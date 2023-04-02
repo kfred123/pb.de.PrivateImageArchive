@@ -4,28 +4,30 @@ import mu.KotlinLogging
 import pia.database.Database
 import pia.database.model.archive.Video
 import pia.exceptions.CreateHashException
-import pia.filesystem.BufferedFileWithMetaData
 import pia.filesystem.FileSystemHelper
+import pia.filesystem.MediaType
+import pia.logic.tools.VideoInfo
 import java.io.IOException
 
 class VideoWriter {
     private val logger = KotlinLogging.logger {  }
-    @Throws(IOException::class, CreateHashException::class)
-    fun addVideo(bufferedFile: BufferedFileWithMetaData, fileName: String?) {
+
+    fun addVideo(sourceFilePath : String, videoInfo: VideoInfo, originalFileName : String) : Video? {
+        var video : Video? = null
         Database.connection.transactional {
-            val video = Video.new {
+            video = Video.new {
                 val fileSystemHelper = FileSystemHelper()
-                val fileOnDisk = id.toString() + "." + fileSystemHelper.getFileExtension(fileName!!)
-                val file = fileSystemHelper.writeFileToDisk(bufferedFile, fileOnDisk)
+                val file = fileSystemHelper.moveFileToArchive(sourceFilePath, originalFileName, videoInfo.getCreationDate().year, videoInfo.getCreationDate().month, MediaType.Video)
                 if (file.exists()) {
-                    originalFileName = fileName
+                    this.originalFileName = originalFileName
                     pathToFileOnDisk = file.absolutePath
-                    creationTime = bufferedFile.mediaItemInfo.getCreationDate()
+                    creationTime = videoInfo.getCreationDate()
                 } else {
                     logger.error("error writing file to disk")
                 }
             }
         }
+        return video
     }
 
     fun deleteVideo(video: Video, force : Boolean): Boolean {

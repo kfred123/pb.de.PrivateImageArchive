@@ -1,36 +1,35 @@
 package pia.logic
 
-import com.drew.lang.StringUtil
 import mu.KotlinLogging
 import pia.database.Database
 import pia.database.model.archive.Image
 import pia.exceptions.CreateHashException
-import pia.filesystem.BufferedFileWithMetaData
 import pia.filesystem.FileSystemHelper
+import pia.filesystem.MediaType
+import pia.logic.tools.ImageInfo
 import java.io.IOException
-import kotlin.jvm.internal.Intrinsics.Kotlin
 
 class ImageWriter {
     private val logger = KotlinLogging.logger {  }
-    @Throws(IOException::class, CreateHashException::class)
-    fun addImage(bufferedFile: BufferedFileWithMetaData, fileName: String?) {
+
+    fun addImage(sourceFilePath : String, imageInfo: ImageInfo, originalFileName : String) : Image? {
+        var image : Image? = null
         Database.connection.transactional {
-            val image = Image.new {
+            image = Image.new {
                 val fileSystemHelper = FileSystemHelper()
-                val fileOnDisk = id.toString() + "." + fileSystemHelper.getFileExtension(fileName!!)
-                val file = fileSystemHelper.writeFileToDisk(bufferedFile, fileOnDisk)
+                val year = imageInfo.getCreationDate().year
+                val month = imageInfo.getCreationDate().month
+                val file = fileSystemHelper.moveFileToArchive(sourceFilePath, originalFileName, year, month, MediaType.Image)
                 if (file.exists()) {
-                    originalFileName = fileName
+                    this.originalFileName = originalFileName
                     pathToFileOnDisk = file.absolutePath
-                    creationTime = bufferedFile.mediaItemInfo.getCreationDate()
+                    creationTime = imageInfo.getCreationDate()
                 } else {
                     logger.error("error writing file to disk")
                 }
-                if(originalFileName.isBlank()) {
-                    var x = 0
-                }
             }
         }
+        return image
     }
 
     fun deleteImage(image: Image, force : Boolean): Boolean {

@@ -11,12 +11,10 @@ import java.time.ZoneOffset
 import java.util.*
 
 class VideoInfoReader {
-    fun readVideoInfo(inputStream : InputStream) : VideoInfo? {
+    fun readVideoInfo(file : File) : VideoInfo? {
         var videoInfo : VideoInfo
-        Channels.newChannel(inputStream).use {
-            IsoFile(it).use {
-                videoInfo = VideoInfo(it.movieBox)
-            }
+        IsoFile(file).use {
+            videoInfo = VideoInfo(it.movieBox)
         }
         return videoInfo
     }

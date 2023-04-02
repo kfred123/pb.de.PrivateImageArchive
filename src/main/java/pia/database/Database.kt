@@ -6,6 +6,7 @@ import kotlinx.dnq.store.container.StaticStoreContainer
 import kotlinx.dnq.store.container.StaticStoreContainer.init
 import kotlinx.dnq.util.initMetaData
 import pia.database.model.archive.Image
+import pia.database.model.archive.StagedFile
 import pia.database.model.archive.Video
 import pia.filesystem.MediaType
 import pia.tools.Configuration
@@ -16,7 +17,7 @@ object Database {
 
     init {
 
-        XdModel.registerNodes(Image, Video)
+        XdModel.registerNodes(Image, Video, StagedFile)
         connection = StaticStoreContainer.init(
             File(Configuration.getPathToFileStorage(), "db"),
             "db"

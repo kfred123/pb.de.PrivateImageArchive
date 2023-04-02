@@ -7,6 +7,7 @@ import kotlinx.dnq.query.toList
 import mu.KotlinLogging
 import pia.database.model.archive.Video
 import pia.filesystem.FileSystemHelper
+import java.io.File
 import java.io.InputStream
 import java.util.*
 import kotlin.jvm.internal.Intrinsics.Kotlin
@@ -35,6 +36,10 @@ class VideoReader {
     ): InputStream {
         val fileSystemHelper = FileSystemHelper()
         return fileSystemHelper.readFileFromDisk(video.pathToFileOnDisk)
+    }
+
+    fun getVideoFile(video: Video) : File {
+        return File(video.pathToFileOnDisk)
     }
 
     companion object {

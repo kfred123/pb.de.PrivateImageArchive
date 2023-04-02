@@ -18,10 +18,10 @@
         </filter>
     </appender>
     <appender name="FILE_ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>pia.log</file>
+        <file>/logs/pia.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- daily rollover -->
-            <fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.gz</fileNamePattern>
+            <fileNamePattern>/logs/${LOG_FILE}.%d{yyyy-MM-dd}.gz</fileNamePattern>
 
             <!-- keep 30 days' worth of history capped at 3GB total size -->
             <maxHistory>30</maxHistory>

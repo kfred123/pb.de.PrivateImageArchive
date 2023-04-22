@@ -1,13 +1,17 @@
 package pia.logic
 
 import mu.KotlinLogging
+import org.joda.time.DateTime
 import pia.database.Database
 import pia.database.model.archive.Image
 import pia.exceptions.CreateHashException
 import pia.filesystem.FileSystemHelper
 import pia.filesystem.MediaType
 import pia.logic.tools.ImageInfo
+import pia.tools.toJodaDateTime
 import java.io.IOException
+import java.time.ZoneId
+import java.util.*
 
 class ImageWriter {
     private val logger = KotlinLogging.logger {  }
@@ -23,7 +27,7 @@ class ImageWriter {
                 if (file.exists()) {
                     this.originalFileName = originalFileName
                     pathToFileOnDisk = file.absolutePath
-                    creationTime = imageInfo.getCreationDate()
+                    creationTime = imageInfo.getCreationDate().toJodaDateTime()
                 } else {
                     logger.error("error writing file to disk")
                 }
@@ -35,7 +39,7 @@ class ImageWriter {
     fun deleteImage(image: Image, force : Boolean): Boolean {
         var deleted = false
         Database.connection.transactional {
-            val imageFile = image.pathToFileOnDisk
+            val imageFile = image.pathToFileOnDisk!!
             val fileSystemHelper = FileSystemHelper()
             var deleteFromDb = true
             if (fileSystemHelper.fileExists(imageFile)) {
@@ -44,7 +48,7 @@ class ImageWriter {
                     logger.error("could not delete imagefile from disk $imageFile, delete db-entry: $force")
                 }
             } else {
-                logger.warn("deleting image ${image.id}, file ${image.pathToFileOnDisk} does not exist, delete db-entry: $force")
+                logger.warn("deleting image ${image.entityId}, file ${image.pathToFileOnDisk} does not exist, delete db-entry: $force")
             }
             if (deleteFromDb) {
                 image.delete()

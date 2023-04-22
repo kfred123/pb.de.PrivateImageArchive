@@ -14,6 +14,7 @@ public class MyApplication extends ResourceConfig {
 
         register(ImageService.class);
         register(VideoService.class);
+        register(StagedFileService.class);
         register(Base.class);
     }
 }

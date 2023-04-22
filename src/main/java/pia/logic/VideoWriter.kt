@@ -7,6 +7,7 @@ import pia.exceptions.CreateHashException
 import pia.filesystem.FileSystemHelper
 import pia.filesystem.MediaType
 import pia.logic.tools.VideoInfo
+import pia.tools.toJodaDateTime
 import java.io.IOException
 
 class VideoWriter {
@@ -21,7 +22,7 @@ class VideoWriter {
                 if (file.exists()) {
                     this.originalFileName = originalFileName
                     pathToFileOnDisk = file.absolutePath
-                    creationTime = videoInfo.getCreationDate()
+                    creationTime = videoInfo.getCreationDate().toJodaDateTime()
                 } else {
                     logger.error("error writing file to disk")
                 }
@@ -36,13 +37,13 @@ class VideoWriter {
             val videoFile = video.pathToFileOnDisk
             val fileSystemHelper = FileSystemHelper()
             var deleteFromDb = true
-            if (fileSystemHelper.fileExists(videoFile)) {
-                if (!fileSystemHelper.deleteFileFromDisk(videoFile)) {
+            if (fileSystemHelper.fileExists(videoFile.orEmpty())) {
+                if (!fileSystemHelper.deleteFileFromDisk(videoFile.orEmpty())) {
                     deleteFromDb = force
                     logger.error("could not delete videofile from disk $videoFile, delete db-entry: $force")
                 }
             } else {
-                logger.warn("deleting video {}, file {} does not exist", video.id, video.pathToFileOnDisk)
+                logger.warn("deleting video {}, file {} does not exist", video.entityId, video.pathToFileOnDisk)
             }
             if (deleteFromDb) {
                 video.delete()

@@ -1,5 +1,6 @@
 package pia.logic
 
+import jetbrains.exodus.entitystore.EntityId
 import kotlinx.dnq.query.*
 import mu.KotlinLogging
 import pia.database.Database
@@ -9,10 +10,10 @@ import java.io.InputStream
 import java.util.*
 
 class ImageReader {
-    fun findImageById(imageId: UUID): Optional<Image> {
+    fun findImageById(imageId: EntityId): Optional<Image> {
         var result = Optional.empty<Image>()
         Database.connection.transactional(true) {
-            result = Optional.ofNullable(Image.query(Image::id eq imageId).firstOrNull())
+            result = Optional.ofNullable(Image.query(Image::entityId eq imageId).firstOrNull())
         }
         return result
     }
@@ -21,13 +22,13 @@ class ImageReader {
         return Image.query(Image::sha256Hash eq sha256).toList()
     }
 
-    fun getImageFileByImageIdFromDisk(imageId: UUID): Optional<InputStream> {
+    fun getImageFileByImageIdFromDisk(imageId: EntityId): Optional<InputStream> {
         var fileStream: Optional<InputStream> = Optional.empty()
         val image = findImageById(imageId)
         if (image.isPresent) {
             val fileSystemHelper = FileSystemHelper()
             fileStream =
-                Optional.of(fileSystemHelper.readFileFromDisk(image.get().pathToFileOnDisk))
+                Optional.of(fileSystemHelper.readFileFromDisk(image.get().pathToFileOnDisk!!))
         }
         return fileStream
     }

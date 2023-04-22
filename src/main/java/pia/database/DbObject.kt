@@ -7,6 +7,4 @@ import java.util.*
 
 open class DbObject(entity : Entity) : XdEntity(entity) {
     companion object : XdNaturalEntityType<DbObject>()
-
-    var id : UUID = UUID.randomUUID()
 }

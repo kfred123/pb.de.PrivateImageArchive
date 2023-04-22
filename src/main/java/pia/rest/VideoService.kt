@@ -7,6 +7,8 @@ import mu.KotlinLogging
 import org.eclipse.jetty.util.StringUtil
 import org.glassfish.jersey.media.multipart.FormDataParam
 import pia.database.Database
+import pia.database.model.archive.StagedType
+import pia.database.model.archive.StagedTypeEntity
 import pia.database.model.archive.Video
 import pia.logic.FileStager
 import pia.logic.VideoReader
@@ -16,6 +18,7 @@ import pia.rest.contract.ObjectList
 import pia.rest.contract.SuccessContract
 import pia.rest.contract.VideoApiContract
 import pia.tools.CurrentRunningUploadUtil
+import pia.tools.toEntityId
 import java.io.InputStream
 import java.net.URI
 import java.time.LocalDateTime
@@ -92,20 +95,18 @@ class VideoService {
         @FormDataParam("creationTimeStamp") creationTimeStamp: LocalDateTime?
     ): Response? {
         videoStream.use {
-            CurrentRunningUploadUtil().use {
-                //logger.info("CurrentRunningUploads: " + CurrentRunningUploadCounter.currentRunningUploads)
-                var response: Response? = null
-                try {
-                    FileStager().stageFile(videoStream, fileName.orEmpty(), FileStager.StagedType.Video)
-                } catch (e: Throwable) {
-                    logger.error(String.format("error adding video %s", fileName), e);
-                    response = Response.serverError().entity(ErrorContract(e)).build()
-                }
-                if (response == null) {
-                    response = Response.created(URI.create("")).build()
-                }
-                return response
+            //logger.info("CurrentRunningUploads: " + CurrentRunningUploadCounter.currentRunningUploads)
+            var response: Response? = null
+            try {
+                FileStager().stageFile(videoStream, fileName.orEmpty(), StagedType.Video)
+            } catch (e: Throwable) {
+                logger.error(String.format("error adding video %s", fileName), e);
+                response = Response.serverError().entity(ErrorContract(e)).build()
             }
+            if (response == null) {
+                response = Response.created(URI.create("")).build()
+            }
+            return response
         }
     }
 
@@ -113,9 +114,8 @@ class VideoService {
     @GET
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     fun getVideoFile(@PathParam("videoId") videoId: String?): Response {
-        val videoUuid = UUID.fromString(videoId)
         val videoReader = VideoReader()
-        val fileStream: Optional<InputStream> = videoReader.getVideoFileByVideoIdFromDisk(videoUuid)
+        val fileStream: Optional<InputStream> = videoReader.getVideoFileByVideoIdFromDisk(videoId!!.toEntityId())
         val response: Response
         response = if (fileStream.isPresent) {
             Response.ok().entity(fileStream.get()).build()
@@ -132,7 +132,7 @@ class VideoService {
         val response: Response
         val videoUuid = UUID.fromString(videoId)
         val videoReader = VideoReader()
-        val video: Optional<Video> = videoReader.findVideoById(videoUuid)
+        val video: Optional<Video> = videoReader.findVideoById(videoId!!.toEntityId())
         response = if (video.isPresent()) {
             val videoWriter = VideoWriter()
             if (videoWriter.deleteVideo(video.get(), false)) {

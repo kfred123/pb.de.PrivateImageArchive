@@ -9,6 +9,8 @@ import org.glassfish.jersey.media.multipart.FormDataParam
 import pia.database.Database
 import pia.database.Database.connection
 import pia.database.model.archive.Image
+import pia.database.model.archive.StagedType
+import pia.database.model.archive.StagedTypeEntity
 import pia.exceptions.InternalException
 import pia.logic.FileStager
 import pia.logic.ImageReader
@@ -19,6 +21,7 @@ import pia.rest.contract.ImageApiContract.Companion.fromDb
 import pia.rest.contract.ObjectList
 import pia.rest.contract.SuccessContract
 import pia.tools.CurrentRunningUploadUtil
+import pia.tools.toEntityId
 import java.io.InputStream
 import java.net.URI
 import java.time.LocalDateTime
@@ -97,17 +100,15 @@ class ImageService {
         @FormDataParam("creationTimeStamp") creationTimeStamp: LocalDateTime?
     ): Response {
         imageStream.use {
-            CurrentRunningUploadUtil().use {
-                //logger.info("CurrentRunningUploads: " + CurrentRunningUploadCounter.currentRunningUploads)
-                var response: Response = try {
-                    FileStager().stageFile(imageStream, fileName.orEmpty(), FileStager.StagedType.Image)
-                    Response.created(URI.create("")).build()
-                } catch (e: Throwable) {
-                    logger.error(String.format("error adding image %s", fileName), e);
-                    Response.serverError().entity(ErrorContract(e)).build()
-                }
-                return response
+            //logger.info("CurrentRunningUploads: " + CurrentRunningUploadCounter.currentRunningUploads)
+            val response: Response = try {
+                FileStager().stageFile(imageStream, fileName.orEmpty(), StagedType.Image)
+                Response.created(URI.create("")).build()
+            } catch (e: Throwable) {
+                logger.error(String.format("error adding image %s", fileName), e);
+                Response.serverError().entity(ErrorContract(e)).build()
             }
+            return response
         }
         // ToDo imagepath is empty for some
     }
@@ -115,11 +116,10 @@ class ImageService {
     @Path("{imageId}/getFile")
     @GET
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    fun getImageFile(@PathParam("imageId") imageId: String?): Response {
+    fun getImageFile(@PathParam("imageId") imageId: String): Response {
         val response: Response = try {
-            val imaageUUID = UUID.fromString(imageId)
             val imageReader = ImageReader()
-            val fileStream = imageReader.getImageFileByImageIdFromDisk(imaageUUID)
+            val fileStream = imageReader.getImageFileByImageIdFromDisk(imageId.toEntityId())
             if (fileStream.isPresent) {
                 Response.ok().entity(fileStream.get()).build()
             } else {
@@ -135,12 +135,12 @@ class ImageService {
     @Path("{imageId}")
     @DELETE
     @Produces(MediaType.APPLICATION_JSON)
-    fun deleteImage(@PathParam("imageId") imageId: String?): Response {
+    fun deleteImage(@PathParam("imageId") imageId: String): Response {
         var response: Response
         try {
             val imageUUID = UUID.fromString(imageId)
             val imageReader = ImageReader()
-            val image = imageReader.findImageById(imageUUID)
+            val image = imageReader.findImageById(imageId.toEntityId())
             response = if (image.isPresent) {
                 val imageWriter = ImageWriter()
                 if (imageWriter.deleteImage(image.get(), false)) {

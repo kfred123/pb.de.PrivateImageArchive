@@ -12,6 +12,9 @@ import pia.logic.tools.ImageInfoReader
 import pia.logic.tools.VideoInfoReader
 import pia.tools.CurrentRunningUploadUtil
 import java.io.File
+import java.util.concurrent.ScheduledThreadPoolExecutor
+import java.util.concurrent.TimeUnit
+import java.util.logging.Logger
 
 class StagedFileAnalyzer {
     companion object {
@@ -19,40 +22,53 @@ class StagedFileAnalyzer {
         val Instance = StagedFileAnalyzer()
     }
 
-    var coroutineScope : CoroutineScope? = null
+    var executor = ScheduledThreadPoolExecutor(1)
+    var executing = false
 
     fun start(delayMs : Long) {
-        if(!CurrentRunningUploadUtil.hasRunningUploads()) {
-            if (coroutineScope == null || !coroutineScope!!.isActive) {
-                runBlocking {
-                    coroutineScope = this
-                    launch {
-                        delay(delayMs)
-                        analyzeStagedFiles()
-                    }
-                }
-            }
+        if(!executing) {
+            executor.schedule(
+                Runnable { run() },
+                delayMs, TimeUnit.MILLISECONDS
+            )
         }
     }
 
     fun stop() {
-        coroutineScope?.cancel()
+        executor.shutdown()
+    }
+
+    private fun run() {
+        try {
+            executing = true
+            analyzeStagedFiles()
+        } catch (e : Throwable) {
+            logger.error { e }
+        } finally {
+            executing = false
+        }
     }
 
     private fun analyzeStagedFiles() {
         Database.connection.beginSession().apply {
             var stagedFile = StagedFile.all().firstOrNull()
             logger.info { "Start analyzing staged files" }
-            while (stagedFile != null && coroutineScope!!.coroutineContext.isActive) {
+            while (stagedFile != null && !executor.isShutdown && !executor.isTerminated && !executor.isTerminating) {
                 if(stagedFile.pathToFileOnDisk.orEmpty().isNotEmpty()) {
-                    if (stagedFile.stagedTypeEntity == StagedTypeEntity.Image) {
-                        analyzeImage(stagedFile);
-                    } else if (stagedFile.stagedTypeEntity == StagedTypeEntity.Video) {
-                        analyzeVideo(stagedFile)
+                    // ToDo why exception when reading staged file
+                    if(FileSystemHelper().fileExists(stagedFile.pathToFileOnDisk!!)) {
+                        if (stagedFile.stagedTypeEntity == StagedTypeEntity.Image) {
+                            analyzeImage(stagedFile);
+                        } else if (stagedFile.stagedTypeEntity == StagedTypeEntity.Video) {
+                            analyzeVideo(stagedFile)
+                        }
+                    } else {
+                        logger.error { "Stagedfile-Entry, file does not exist: ${stagedFile!!.pathToFileOnDisk}} " }
+                        deleteStagedFile(stagedFile)
                     }
                 } else {
                     logger.error { "Stagedfile-Entry without filePath ${stagedFile!!.entityId}" }
-                    stagedFile.delete()
+                    deleteStagedFile(stagedFile)
                 }
                 stagedFile = StagedFile.all().firstOrNull()
             }
@@ -66,6 +82,12 @@ class StagedFileAnalyzer {
         val file = VideoWriter().addVideo(stagedFile.pathToFileOnDisk!!, videoInfo!!, stagedFile.originalFileName!!)
         if(file != null) {
             removeStagedFile(stagedFile)
+        }
+    }
+
+    private fun deleteStagedFile(stagedFile: StagedFile) {
+        Database.connection.transactional {
+            stagedFile.delete()
         }
     }
 

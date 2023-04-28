@@ -6,6 +6,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Month
 import java.time.format.TextStyle
@@ -18,9 +19,24 @@ class FileSystemHelper {
             Path(Configuration.getPathToFileStorage(), year.toString(), month.getDisplayName(TextStyle.SHORT, Locale.ENGLISH),
                 mediaType.name)
         pathToDir.toFile().mkdirs()
-        val targetPath = Path(pathToDir.toString(), fileName)
+        val targetPath = getUniqueTargetPath(pathToDir, fileName)
         Files.move(Paths.get(sourceFilePath), targetPath)
         return targetPath.toFile()
+    }
+
+
+    private fun getUniqueTargetPath(pathToDir : Path, fileName : String) : Path {
+        return getUniqueTargetPath(pathToDir, fileName, 1)
+    }
+
+    private fun getUniqueTargetPath(pathToDir : Path, fileName : String, index : Int) : Path {
+        val targetPath = Path(pathToDir.toString(), fileName)
+        if(targetPath.toFile().exists()) {
+            val indexOfLastDot = fileName.lastIndexOf(".")
+            val newFileName = fileName.substring(0, indexOfLastDot) + "_" + index + fileName.substring(indexOfLastDot)
+            return getUniqueTargetPath(pathToDir, newFileName, index + 1)
+        }
+        return targetPath
     }
 
     fun writeFileToDisk(fileName : String, inputStream: InputStream, vararg subFolder : String) : File {

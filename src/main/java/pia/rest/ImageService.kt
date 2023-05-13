@@ -2,25 +2,25 @@ package pia.rest
 
 import jetbrains.exodus.query.GetAll
 import jetbrains.exodus.query.NodeBase
-import kotlinx.dnq.query.*
+import kotlinx.dnq.query.eq
+import kotlinx.dnq.query.query
+import kotlinx.dnq.query.toList
 import mu.KotlinLogging
 import org.eclipse.jetty.util.StringUtil
 import org.glassfish.jersey.media.multipart.FormDataParam
 import pia.database.Database
-import pia.database.Database.connection
 import pia.database.model.archive.Image
 import pia.database.model.archive.StagedType
-import pia.database.model.archive.StagedTypeEntity
 import pia.exceptions.InternalException
 import pia.logic.FileStager
 import pia.logic.ImageReader
 import pia.logic.ImageWriter
+import pia.logic.WorkBalancer
 import pia.rest.contract.ErrorContract
 import pia.rest.contract.ImageApiContract
 import pia.rest.contract.ImageApiContract.Companion.fromDb
 import pia.rest.contract.ObjectList
 import pia.rest.contract.SuccessContract
-import pia.tools.CurrentRunningUploadUtil
 import pia.tools.toEntityId
 import java.io.InputStream
 import java.net.URI
@@ -32,14 +32,15 @@ import javax.ws.rs.core.Response
 
 @Path("images")
 class ImageService {
-    val logger = KotlinLogging.logger {  }
+    val logger = KotlinLogging.logger { }
+
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    fun queryImages(@QueryParam("missingFilePath") missingFilePath : Boolean): Response {
-        var response : Response
+    fun queryImages(@QueryParam("missingFilePath") missingFilePath: Boolean): Response {
+        var response: Response
         response = try {
             val imageApiContractObjectList = ObjectList<ImageApiContract>()
-            connection.transactional(true) {
+            Database.connection.transactional(true) {
 
                 for (image in Image.query(applyFilter(missingFilePath)).toList()) {
                     val contract = fromDb(image)
@@ -47,19 +48,19 @@ class ImageService {
                 }
             }
             Response.ok().entity(imageApiContractObjectList).build()
-        } catch (e : java.lang.Exception) {
-            logger.error(e) {  }
+        } catch (e: java.lang.Exception) {
+            logger.error(e) { }
             Response.serverError().build()
         }
         return response
     }
 
-    private fun applyFilter(missingFilePath: Boolean) : NodeBase {
-        var nodeBase : NodeBase? = null
-        if(missingFilePath) {
+    private fun applyFilter(missingFilePath: Boolean): NodeBase {
+        var nodeBase: NodeBase? = null
+        if (missingFilePath) {
             nodeBase = Image::pathToFileOnDisk eq ""
         }
-        if(nodeBase == null) {
+        if (nodeBase == null) {
             nodeBase = GetAll()
         }
         return nodeBase
@@ -84,7 +85,7 @@ class ImageService {
             } else {
                 Response.status(Response.Status.NO_CONTENT).build()
             }
-        } catch (e : java.lang.Exception) {
+        } catch (e: java.lang.Exception) {
             logger.error(e) { }
             response = Response.serverError().build()
         }
@@ -99,18 +100,19 @@ class ImageService {
         @FormDataParam("fileName") fileName: String?,
         @FormDataParam("creationTimeStamp") creationTimeStamp: LocalDateTime?
     ): Response {
-        imageStream.use {
-            //logger.info("CurrentRunningUploads: " + CurrentRunningUploadCounter.currentRunningUploads)
-            val response: Response = try {
+        //logger.info("CurrentRunningUploads: " + CurrentRunningUploadCounter.currentRunningUploads)
+        WorkBalancer.startStagingFile()
+        val response: Response = try {
+            imageStream.use {
                 FileStager().stageFile(imageStream, fileName.orEmpty(), StagedType.Image)
                 Response.created(URI.create("")).build()
-            } catch (e: Throwable) {
-                logger.error(String.format("error adding image %s", fileName), e);
-                Response.serverError().entity(ErrorContract(e)).build()
             }
-            return response
+        } catch (e: Throwable) {
+            logger.error(String.format("error adding image %s", fileName), e);
+            Response.serverError().entity(ErrorContract(e)).build()
         }
-        // ToDo imagepath is empty for some
+        WorkBalancer.endStagingFile()
+        return response
     }
 
     @Path("{imageId}/getFile")
@@ -125,8 +127,8 @@ class ImageService {
             } else {
                 Response.noContent().build()
             }
-        } catch (e : Exception) {
-            logger.error(e) {  }
+        } catch (e: Exception) {
+            logger.error(e) { }
             Response.serverError().build()
         }
         return response
@@ -152,7 +154,7 @@ class ImageService {
             } else {
                 Response.status(Response.Status.NOT_FOUND).build()
             }
-        } catch (e : java.lang.Exception) {
+        } catch (e: java.lang.Exception) {
             logger.error(e) { }
             response = Response.serverError().build()
         }
@@ -163,18 +165,19 @@ class ImageService {
     @DELETE
     @Produces(MediaType.APPLICATION_JSON)
     fun deleteAllDebug(): Response {
-        var response : Response
+        var response: Response
         try {
             val writer = ImageWriter()
             Database.connection.transactional {
                 for (image in Image.all().toList()) {
-                    if(!writer.deleteImage(image, true)) {
+                    if (!writer.deleteImage(image, true)) {
                         throw InternalException("unable to delete image ${image.pathToFileOnDisk}")
                     }
                 }
+                it.commit()
             }
             response = Response.ok().build()
-        } catch (e : java.lang.Exception) {
+        } catch (e: java.lang.Exception) {
             logger.error(e) {}
             response = Response.serverError().build()
         }

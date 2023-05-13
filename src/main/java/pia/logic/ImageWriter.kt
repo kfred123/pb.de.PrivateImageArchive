@@ -18,19 +18,18 @@ class ImageWriter {
 
     fun addImage(sourceFilePath : String, imageInfo: ImageInfo, originalFileName : String) : Image? {
         var image : Image? = null
-        Database.connection.transactional {
-            image = Image.new {
-                val fileSystemHelper = FileSystemHelper()
-                val year = imageInfo.getCreationDate().year
-                val month = imageInfo.getCreationDate().month
-                val file = fileSystemHelper.moveFileToArchive(sourceFilePath, originalFileName, year, month, MediaType.Image)
-                if (file.exists()) {
-                    this.originalFileName = originalFileName
-                    pathToFileOnDisk = file.absolutePath
-                    creationTime = imageInfo.getCreationDate().toJodaDateTime()
-                } else {
-                    logger.error("error writing file to disk")
-                }
+        image = Image.new {
+            val fileSystemHelper = FileSystemHelper()
+            val year = imageInfo.getCreationDate().year
+            val month = imageInfo.getCreationDate().month
+            val file =
+                fileSystemHelper.moveFileToArchive(sourceFilePath, originalFileName, year, month, MediaType.Image)
+            if (file.exists()) {
+                this.originalFileName = originalFileName
+                pathToFileOnDisk = file.absolutePath
+                creationTime = imageInfo.getCreationDate().toJodaDateTime()
+            } else {
+                logger.error("error writing file to disk")
             }
         }
         return image
@@ -54,6 +53,7 @@ class ImageWriter {
                 image.delete()
                 deleted = true
             }
+            it.commit()
         }
         return deleted
     }

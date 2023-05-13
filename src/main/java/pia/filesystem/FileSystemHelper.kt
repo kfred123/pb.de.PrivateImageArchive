@@ -33,7 +33,14 @@ class FileSystemHelper {
         val targetPath = Path(pathToDir.toString(), fileName)
         if(targetPath.toFile().exists()) {
             val indexOfLastDot = fileName.lastIndexOf(".")
-            val newFileName = fileName.substring(0, indexOfLastDot) + "_" + index + fileName.substring(indexOfLastDot)
+            var newFileName = ""
+            if(indexOfLastDot >= 0) {
+                newFileName =
+                    fileName.substring(0, indexOfLastDot) + "_" + index + fileName.substring(indexOfLastDot)
+            } else {
+                newFileName =
+                    fileName + "_" + index
+            }
             return getUniqueTargetPath(pathToDir, newFileName, index + 1)
         }
         return targetPath

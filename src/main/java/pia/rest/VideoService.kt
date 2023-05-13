@@ -46,6 +46,7 @@ class VideoService {
                     )
                     videoApiContractObjectList.add(contract)
                 }
+                it.commit()
             }
         } catch (e : java.lang.Exception) {
             logger.error("error reading videos", e)
@@ -156,6 +157,7 @@ class VideoService {
             for (video in Video.all().toList()) {
                 writer.deleteVideo(video, true)
             }
+            it.commit()
         }
         return Response.ok().build()
     }

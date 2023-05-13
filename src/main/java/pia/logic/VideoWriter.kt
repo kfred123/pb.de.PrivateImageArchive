@@ -15,17 +15,15 @@ class VideoWriter {
 
     fun addVideo(sourceFilePath : String, videoInfo: VideoInfo, originalFileName : String) : Video? {
         var video : Video? = null
-        Database.connection.transactional {
-            video = Video.new {
-                val fileSystemHelper = FileSystemHelper()
-                val file = fileSystemHelper.moveFileToArchive(sourceFilePath, originalFileName, videoInfo.getCreationDate().year, videoInfo.getCreationDate().month, MediaType.Video)
-                if (file.exists()) {
-                    this.originalFileName = originalFileName
-                    pathToFileOnDisk = file.absolutePath
-                    creationTime = videoInfo.getCreationDate().toJodaDateTime()
-                } else {
-                    logger.error("error writing file to disk")
-                }
+        video = Video.new {
+            val fileSystemHelper = FileSystemHelper()
+            val file = fileSystemHelper.moveFileToArchive(sourceFilePath, originalFileName, videoInfo.getCreationDate().year, videoInfo.getCreationDate().month, MediaType.Video)
+            if (file.exists()) {
+                this.originalFileName = originalFileName
+                pathToFileOnDisk = file.absolutePath
+                creationTime = videoInfo.getCreationDate().toJodaDateTime()
+            } else {
+                logger.error("error writing file to disk")
             }
         }
         return video
@@ -49,6 +47,7 @@ class VideoWriter {
                 video.delete()
                 deleted = true
             }
+            it.commit()
         }
         return deleted
     }

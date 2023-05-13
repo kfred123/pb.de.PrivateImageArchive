@@ -4,7 +4,7 @@ import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.servlet.ServletContextHandler
 import org.glassfish.jersey.servlet.ServletContainer
 import org.slf4j.LoggerFactory
-import pia.database.Database.connection
+import pia.database.Database
 import pia.logic.StagedFileAnalyzer
 
 object StartJettyServer {
@@ -15,7 +15,7 @@ object StartJettyServer {
         val lc = LoggerFactory.getILoggerFactory() as LoggerContext
         // print logback's internal status
         StatusPrinter.print(lc)
-        connection
+        Database
         val server = Server(8080)
         val contextHandler = ServletContextHandler(ServletContextHandler.NO_SESSIONS)
         contextHandler.contextPath = "/"

@@ -19,14 +19,14 @@ class FileStager {
         val StageDir = "staged"
     }
 
-    fun stageFile(inputStream : InputStream, originalFileName : String, stagedType: StagedType) {
+    fun stageFile(inputStream: InputStream, originalFileName: String, stagedType: StagedType) {
         CurrentRunningUploadUtil().use {
-            StagedFileAnalyzer.Instance.stop()
             Database.connection.transactional { transaction ->
                 val fileSystemHelper = FileSystemHelper()
                 val fileOnDisk = "${UUID.randomUUID()}_${File(originalFileName).normalize().name}"
-                val file = fileSystemHelper.writeFileToDisk(fileOnDisk, inputStream, StageDir, getFolderName(stagedType))
-                if(file.exists()) {
+                val file =
+                    fileSystemHelper.writeFileToDisk(fileOnDisk, inputStream, StageDir, getFolderName(stagedType))
+                if (file.exists()) {
                     StagedFile.new {
                         this.originalFileName = originalFileName
                         pathToFileOnDisk = file.absolutePath
@@ -37,9 +37,9 @@ class FileStager {
                     logger.error("error writing file to disk")
                     throw java.lang.Exception("error writing file to disk")
                 }
+                transaction.commit()
             }
         }
-        StagedFileAnalyzer.Instance.start(10000)
     }
 
     private fun getFolderName(stagedTypeEntity: StagedType) : String {

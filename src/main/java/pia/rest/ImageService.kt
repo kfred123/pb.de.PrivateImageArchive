@@ -174,7 +174,6 @@ class ImageService {
                         throw InternalException("unable to delete image ${image.pathToFileOnDisk}")
                     }
                 }
-                it.commit()
             }
             response = Response.ok().build()
         } catch (e: java.lang.Exception) {

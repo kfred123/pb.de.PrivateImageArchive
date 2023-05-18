@@ -157,7 +157,6 @@ class VideoService {
             for (video in Video.all().toList()) {
                 writer.deleteVideo(video, true)
             }
-            it.commit()
         }
         return Response.ok().build()
     }
